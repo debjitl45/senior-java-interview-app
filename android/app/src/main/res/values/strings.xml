@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Java InterviewMaster </string>
+    <string name="title_activity_main">Java InterviewMaster </string>
+    <string name="package_name">com.yourname.javainterviewmaster</string>
+    <string name="custom_url_scheme">com.yourname.javainterviewmaster</string>
+</resources>
