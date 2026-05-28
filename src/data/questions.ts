@@ -214,6 +214,131 @@ To ensure a custom \`ClassLoader\` can be cleanly unloaded:
     ],
     faangFocus: 'Extremely relevant for platforms that support dynamic code execution, serverless runtimes, or modular monoliths. Tests deep mastery of the Java Classloading hierarchy.'
   },
+  {
+    id: 'jvm-5',
+    categoryId: 'jvm',
+    title: 'Classloading Exceptions Explained',
+    difficulty: 'Hard',
+    tags: ['Classloader', 'Exceptions', 'JVM'],
+    scenario: 'An application crashes on startup after a recent deployment. It compiled perfectly in the CI/CD pipeline, leaving junior developers confused.',
+    question: 'What is the difference between ClassNotFoundException and NoClassDefFoundError?',
+    idealAnswer: `### 1. ClassNotFoundException (Checked Exception)
+This is thrown when the application explicitly tries to load a class at runtime using reflection (e.g., \`Class.forName()\`, \`ClassLoader.loadClass()\`) and the class is not found in the classpath. Because it is an expected runtime scenario (like missing a JDBC driver), it is a **Checked Exception** and must be handled.
+
+### 2. NoClassDefFoundError (Error)
+This is an **Error**, indicating a severe JVM issue. It occurs when a class was present during compile time (so the build succeeds), but is **absent or fails to load at runtime**. For example, compiling against a JAR that is accidentally omitted from the runtime classpath.
+
+### 3. Tricky Scenarios (Static Initialization)
+A common and hard-to-debug cause for \`NoClassDefFoundError\` is when a class's **static initialization block throws an exception** (e.g., parsing a bad string into a static int). 
+The first time the classloader attempts initialization, it throws an \`ExceptionInInitializerError\`. The JVM caches this failure. Any subsequent attempt to load the class results in a \`NoClassDefFoundError\` because the JVM remembers it failed and refuses to retry.`,
+    pitfalls: [
+      'Treating both as the same "missing file" problem without understanding the compile-time vs runtime distinction.',
+      'Failing to realize NoClassDefFoundError is an Error, not an Exception.',
+      'Missing the static initializer failure scenario, which is a favorite follow-up for senior interviews.'
+    ],
+    followUpQuestions: [
+      'How does Java\'s parent-delegation classloading model work?',
+      'How would you debug a NoClassDefFoundError caused by a static init failure?'
+    ],
+    faangFocus: 'Deep understanding of the JVM classloader architecture is required when dealing with complex modular systems, plugins, or custom containers often built at scale.'
+  },
+  {
+    id: 'jvm-6',
+    categoryId: 'jvm',
+    title: 'String Interning and G1GC Deduplication',
+    difficulty: 'Hard',
+    tags: ['String Pool', 'G1GC', 'Memory Optimization'],
+    scenario: 'Your application processes millions of text records, leading to high heap usage. You need to optimize memory footprint without rewriting core business logic.',
+    question: 'Explain String interning, String pool, and how Java handles String deduplication in G1GC.',
+    idealAnswer: `### 1. String Pool and Interning
+The **String pool** is a special memory region in the heap (moved from PermGen in Java 7) that stores String literals. Declaring \`String s1 = "Hello"\` places it in the pool. A subsequent \`String s2 = "Hello"\` reuses the same reference, meaning \`s1 == s2\` is true. Conversely, \`new String("Hello")\` forces allocation on the main heap.
+You can manually move a heap string to the pool using \`intern()\`. It returns the pool reference if the content exists, otherwise it adds it.
+
+### 2. Compile-Time vs Runtime Concatenation
+Compile-time concatenations (e.g., \`"Hel" + "lo"\`) are optimized by the compiler directly into the pool as \`"Hello"\`. Runtime concatenations involving variables create new objects on the regular heap.
+
+### 3. G1GC String Deduplication (Trade-offs)
+Enabled via \`-XX:+UseStringDeduplication\`, this GC feature scans for Strings with identical content and forces them to share the same backing \`char[]\` (or \`byte[]\` in newer Java versions). 
+**Trade-offs:** Unlike interning, the String objects themselves remain separate in memory, but the underlying data array is shared. This typically saves 10–25% of heap space in data-heavy apps without requiring code changes, at the cost of slight CPU overhead during GC.`,
+    pitfalls: [
+      'Confusing String deduplication (shares backing array) with String interning (shares the actual String object).',
+      'Believing the String pool is still in the PermGen space (it moved in Java 7).',
+      'Assuming runtime string concatenation behaves the same as compile-time.'
+    ],
+    followUpQuestions: [
+      'Since Java 9, how has the internal representation of Strings changed? (Hint: Compact Strings)',
+      'Is it a good idea to call intern() on every string you create?'
+    ],
+    faangFocus: 'Memory efficiency at scale is vital at companies like Amazon and Netflix. Demonstrating knowledge of JVM-level optimizations shows you can scale apps efficiently.'
+  },
+  {
+    id: 'jvm-7',
+    categoryId: 'jvm',
+    title: 'Class Data Sharing (CDS) and Startup Optimization',
+    difficulty: 'Expert',
+    tags: ['CDS', 'AppCDS', 'Startup Time', 'Microservices'],
+    scenario: 'Your Spring Boot microservice deployed on Kubernetes takes 45 seconds to start, causing slow scaling during traffic spikes. You need to reduce startup time to under 5 seconds.',
+    question: 'Explain how Class Data Sharing (CDS) and Application Class Data Sharing (AppCDS) work internally. How do they reduce JVM startup time and memory footprint? What are the limitations when used with Spring Boot?',
+    idealAnswer: `### 1. What is Class Data Sharing (CDS)?
+  **CDS** is a JVM feature that pre-processes and stores core JDK classes (like \`java.lang.String\`, \`java.util.*\`) into a shared archive file (\`classes.jsa\`). When multiple JVMs start on the same machine, they can **memory-map** this archive instead of loading classes individually.
+  
+  ### 2. How CDS Reduces Startup Time
+  * **Traditional Startup:** The JVM must load, verify, and prepare ~15,000+ core classes from JAR files on every startup. This involves disk I/O, bytecode verification, and memory allocation.
+  * **With CDS:** The pre-processed classes are memory-mapped directly from the archive. The JVM skips loading and verification, reducing startup time by **30-40%**.
+  
+  ### 3. Application CDS (AppCDS) - Java 10+
+  AppCDS extends CDS to include **application classes** (your code + third-party libraries):
+  * **Step 1:** Run the app once with \`-XX:DumpLoadedClassList=classes.lst\` to capture all loaded classes.
+  * **Step 2:** Generate the archive: \`java -XX:SharedArchiveFile=app-cds.jsa -XX:SharedClassListFile=classes.lst -Xshare:dump\`
+  * **Step 3:** Use the archive: \`java -XX:SharedArchiveFile=app-cds.jsa -Xshare:on -jar myapp.jar\`
+  
+  ### 4. Spring Boot Integration
+  Spring Boot 3.3+ has native AppCDS support via the \`spring-boot-maven-plugin\`:
+  * Add \`<excludeDevtools>true</excludeDevtools>\` and enable CDS in the plugin configuration.
+  * This can reduce Spring Boot startup from 45s to **8-12s**.
+  
+  ### 5. Limitations
+  * **Dynamic Class Loading:** If your app uses reflection-heavy frameworks that load classes dynamically at runtime, those classes won't be in the archive.
+  * **Classpath Sensitivity:** The archive is tied to the exact classpath. Changing dependencies requires regenerating the archive.
+  * **Memory Mapping:** Requires the OS to support memory-mapped files (all modern OSes do, but container filesystems like overlayfs can have edge cases).`,
+    codeSnippet: `# Generate AppCDS archive for Spring Boot
+  java -XX:ArchiveClassesAtExit=app-cds.jsa -jar myapp.jar
+  
+  # Subsequent runs use the archive
+  java -XX:SharedArchiveFile=app-cds.jsa -jar myapp.jar`,
+    pitfalls: [
+      'Forgetting to regenerate the archive after changing dependencies.',
+      'Using CDS with Spring DevTools enabled (causes conflicts).',
+      'Assuming CDS helps with runtime performance (it only helps startup time and memory).'
+    ],
+    followUpQuestions: [
+      'How does CDS interact with GraalVM Native Image?',
+      'What is the difference between static and dynamic CDS archives?'
+    ],
+    faangFocus: 'Critical for companies running thousands of microservices on Kubernetes (Netflix, Uber). Startup time directly impacts auto-scaling responsiveness and infrastructure costs.'
+  },
+  {
+    id: 'jvm-8',
+    categoryId: 'jvm',
+    title: 'Shenandoah GC vs ZGC: Ultra-Low Latency Showdown',
+    difficulty: 'Master',
+    tags: ['Shenandoah', 'ZGC', 'Garbage Collection', 'Red Hat', 'Oracle', 'Latency'],
+    scenario: 'You are the Lead JVM Architect at a global fintech company processing 2 million transactions per second. Your CTO mandates that no single request can experience more than a 500-microsecond pause due to garbage collection. You must choose between Red Hat\'s Shenandoah GC and Oracle\'s ZGC for a 128GB heap deployment on Linux.',
+    question: 'Compare Shenandoah and ZGC at the architectural level. What are the fundamental differences in their concurrent compaction strategies (Brooks Pointers vs Colored Pointers)? Which one should you choose for this specific fintech use case and why?',
+    idealAnswer: '### 1. Core Architectural Differences\nBoth Shenandoah and ZGC are ultra-low-latency concurrent collectors that perform compaction concurrently with application threads.\n\n### 2. Shenandoah (Red Hat / OpenJDK)\n* **Brooks Pointers (Forwarding Pointers):** Shenandoah adds an extra pointer to every object header.\n* **Concurrent Compaction:** During collection, Shenandoah updates Brooks Pointers while application threads continue running.\n* **Generational Mode (JEP 404+):** As of Java 18+, Shenandoah supports generational collection.\n\n### 3. ZGC (Oracle / OpenJDK)\n* **Colored Pointers:** ZGC embeds metadata directly into the unused bits of a 64-bit pointer.\n* **Load Barriers (Self-Healing):** When a Java thread loads a reference, a JIT-compiled load barrier checks the colored bits.\n* **Generational Mode (JEP 439+):** As of Java 21+, ZGC supports generational collection.\n\n### 4. Decision Framework\n| Factor | Shenandoah | ZGC |\n|:---|:---|:---|\n| **Pointer Overhead** | Extra word per object | Zero overhead |\n| **Throughput** | Slightly lower | Slightly higher |\n| **Best For** | Steady allocation | Bursty allocation |\n\n### 5. Recommendation for Fintech\n**Choose ZGC** because its zero-overhead colored pointers result in slightly better raw throughput at 2M TPS.',
+    pitfalls: [
+      'Claiming ZGC and Shenandoah have identical performance profiles.',
+      'Forgetting that both collectors now support generational mode in Java 21+.',
+      'Ignoring the Brooks Pointer memory overhead of Shenandoah on very large heaps.',
+      'Not mentioning that both require specific JVM flags and are NOT the default collectors.'
+    ],
+    followUpQuestions: [
+      'How does the Brooks Pointer overhead of Shenandoah scale as heap size increases from 16GB to 512GB?',
+      'What is the impact of ZGC\'s colored pointers on compressed class pointers (CompressedOops)?',
+      'How do you set up automated JFR-based GC pause monitoring in a Kubernetes environment?'
+    ],
+    faangFocus: 'Red Hat and Oracle engineering teams use this exact question to evaluate whether candidates can make data-driven JVM tuning decisions at extreme scale.'
+  },
 
   // CONCURRENCY
   {
@@ -413,6 +538,122 @@ Because an optimistic read doesn't actually block writers, a writer *can* acquir
     ],
     faangFocus: 'Shows that you know the standard library deeply and can choose the exact right synchronization primitive for extreme read-heavy vs write-heavy workloads.'
   },
+  {
+    id: 'conc-5',
+    categoryId: 'concurrency',
+    title: 'Volatile vs Atomic for Counters',
+    difficulty: 'Hard',
+    tags: ['Volatile', 'CAS', 'Multithreading'],
+    scenario: 'A highly concurrent API rate limiter is showing lower traffic counts than expected in production under heavy load.',
+    question: 'Two threads updating a counter result in incorrect values even though you used volatile. Why? Provide the fix.',
+    idealAnswer: `### 1. The Volatile Misconception
+Many assume \`volatile\` makes operations atomic, but it only guarantees **visibility** (changes are immediately visible across threads) and prevents instruction reordering. 
+When writing \`counter++\`, it translates to three distinct operations: **Read, Add, Write**. If two threads read the value simultaneously (e.g., 0), increment it, and write it back, they overwrite each other. The net result is 1 instead of 2. This is a classic race condition.
+
+### 2. The Fix: AtomicInteger vs LongAdder
+To fix this, you need atomicity. 
+For simple atomic counters, use **\`AtomicInteger\`**. Its \`incrementAndGet()\` method uses a hardware-level Compare-And-Swap (CAS) operation, which is lock-free and efficient.
+For high-concurrency scenarios, use **\`LongAdder\`**. Instead of a single value causing heavy CAS contention, \`LongAdder\` maintains multiple internal cells. Threads increment different cells independently, and the total is summed up when needed.
+
+### 3. Trade-offs
+- **\`AtomicInteger\`**: Best when you need the exact current value immediately. Under extreme contention, CAS spins waste CPU cycles.
+- **\`LongAdder\`**: Offers vastly superior throughput under heavy write contention, but reading the final sum is slightly more expensive and only eventually consistent during the read.`,
+    pitfalls: [
+      'Saying volatile provides atomicity for compound operations like ++.',
+      'Suggesting synchronized blocks for a simple counter, which is a performance killer compared to CAS.',
+      'Not knowing about LongAdder (introduced in Java 8) and only mentioning AtomicInteger.'
+    ],
+    followUpQuestions: [
+      'How exactly does the Compare-And-Swap (CAS) mechanism work under the hood?',
+      'When would you be forced to use synchronized or ReentrantLock over atomics?'
+    ],
+    faangFocus: 'High-throughput system design is a staple at top tech companies. Showing you know how to reduce thread contention via LongAdder proves you can optimize for scale.'
+  },
+  {
+    id: 'conc-6',
+    categoryId: 'concurrency',
+    title: 'The Happens-Before Relationship',
+    difficulty: 'Expert',
+    tags: ['JMM', 'Happens-Before', 'Visibility'],
+    scenario: 'You are reviewing a custom lock-free data structure. The code works fine on x86 architectures but behaves unpredictably on ARM-based servers.',
+    question: 'Explain the happens-before relationship in Java Memory Model. Why is it critical?',
+    idealAnswer: `### 1. What is Happens-Before?
+The Java Memory Model (JMM) relies on the **happens-before** relationship to guarantee memory visibility between threads. Without it, compilers, the JVM, or CPUs are free to reorder instructions for optimization. If Action A happens-before Action B, the JMM guarantees that the results of A are visible to B, and A is executed before B.
+
+### 2. Key Rules
+Several rules establish this guarantee:
+1. **Program Order**: Actions in a single thread happen-before subsequent actions in that same thread.
+2. **Volatile Variable Rule**: A write to a volatile variable happens-before any subsequent read of that same volatile variable.
+3. **Monitor Lock Rule**: Unlocking a monitor (exiting a synchronized block) happens-before any subsequent locking of that same monitor.
+4. **Thread Start/Join**: \`Thread.start()\` happens-before any code inside the thread. All actions in a thread happen-before \`Thread.join()\` returns.
+
+### 3. Why It Is Critical (Trade-offs)
+Without happens-before, multithreading is completely non-deterministic. For example, a thread might see a \`volatile boolean isReady = true\` flag, but due to reordering, it might read stale values of the actual data the flag was supposed to protect.
+By leveraging happens-before, developers can write safe concurrent code while allowing the JVM maximum leeway to aggressively optimize and reorder everything else.`,
+    pitfalls: [
+      'Confusing the JMM happens-before relationship with simple chronological execution time.',
+      'Failing to understand that hardware architectures (like ARM vs x86) handle memory barriers differently, making JMM guarantees essential.',
+      'Thinking synchronization only prevents race conditions, ignoring its critical role in memory visibility.'
+    ],
+    followUpQuestions: [
+      'Can you explain the double-checked locking singleton pattern and why volatile is required for it to work?',
+      'What are memory barriers (memory fences) and how do they relate to happens-before?'
+    ],
+    faangFocus: 'Concurrency bugs are notoriously difficult to reproduce. Mastery of the JMM demonstrates you can write thread-safe frameworks from scratch, a highly valued skill for core infrastructure teams.'
+  },
+  {
+    id: 'conc-7',
+    categoryId: 'concurrency',
+    title: 'Structured Concurrency in Java 21',
+    difficulty: 'Expert',
+    tags: ['Structured Concurrency', 'Virtual Threads', 'Java 21', 'JEP 453'],
+    scenario: 'You have a request handler that must concurrently fetch user profile data, order history, and recommendation scores from three different microservices. If any one fails, the entire request should fail fast.',
+    question: 'Compare traditional ExecutorService-based concurrency with the new Structured Concurrency API (JEP 453). How does Structured Concurrency simplify error handling and cancellation?',
+    idealAnswer: `### 1. The Problem with Traditional Concurrency
+  Using \`ExecutorService\` and \`CompletableFuture\` for concurrent subtasks creates several issues:
+  * **Orphaned Tasks:** If one subtask fails, the others continue running, wasting resources.
+  * **Complex Cancellation:** Manually tracking and cancelling related tasks requires verbose boilerplate.
+  * **Debugging Nightmares:** Thread dumps show disconnected tasks with no clear parent-child relationship.
+  
+  ### 2. Structured Concurrency (JEP 453)
+  Structured Concurrency treats multiple concurrent tasks running in different threads as a **single unit of work**. Key principles:
+  * **Single Entry/Exit Point:** All subtasks must complete (successfully or with failure) before the parent scope exits.
+  * **Automatic Cancellation:** If one subtask fails, all sibling subtasks are automatically cancelled.
+  * **Clear Ownership:** The lifecycle of subtasks is tied to the parent scope.
+  
+  ### 3. Using StructuredTaskScope
+  \`\`\`java
+  try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+      Subtask<UserProfile> profile = scope.fork(() -> fetchProfile(userId));
+      Subtask<OrderHistory> orders = scope.fork(() -> fetchOrders(userId));
+      Subtask<Recommendations> recs = scope.fork(() -> fetchRecommendations(userId));
+      
+      scope.join();            // Wait for all subtasks
+      scope.throwIfFailed();   // Propagate errors
+      
+      return new UserDashboard(profile.get(), orders.get(), recs.get());
+  }
+  \`\`\`
+  
+  ### 4. Shutdown Policies
+  * **\`ShutdownOnFailure\`:** Cancels all subtasks if any one fails (fail-fast).
+  * **\`ShutdownOnSuccess\`:** Cancels all subtasks once any one succeeds (useful for redundant computation, like querying multiple caches).
+  
+  ### 5. Benefits
+  * **Fail-Fast:** No wasted compute on orphaned tasks.
+  * **Observability:** Thread dumps show the parent-child relationship clearly.
+  * **Simplicity:** Eliminates boilerplate \`Future.get()\` error handling.`,
+    pitfalls: [
+      'Forgetting to call \`scope.join()\` before accessing subtask results.',
+      'Using Structured Concurrency for fire-and-forget tasks (use Virtual Threads directly for those).',
+      'Not understanding that \`ShutdownOnFailure\` cancels siblings on first failure, which may not be desired for all use cases.'
+    ],
+    followUpQuestions: [
+      'How does Structured Concurrency interact with Scoped Values (JEP 446)?',
+      'Can you nest StructuredTaskScopes?'
+    ],
+    faangFocus: 'Essential for modern Java 21+ microservices. Companies like Amazon and Google are actively refactoring legacy CompletableFuture code to Structured Concurrency for better reliability.'
+  },
 
   // DISTRIBUTED SYSTEMS & ARCHITECTURE
   {
@@ -521,6 +762,60 @@ The API gateway/service executes the following lifecycle:
       'How do you ensure the HTTP response cached in Redis doesn\'t violate data privacy laws (e.g., PCI-DSS)?'
     ],
     faangFocus: 'Stripe, Square, and Amazon interviewers love this. It tests your ability to handle real-world distributed edge cases, race conditions, and atomic storage operations.'
+  },
+  {
+    id: 'arch-4',
+    categoryId: 'architecture',
+    title: 'Event Sourcing and CQRS at Scale',
+    difficulty: 'Expert',
+    tags: ['Event Sourcing', 'CQRS', 'Domain Events', 'Eventual Consistency'],
+    scenario: 'You are designing a banking ledger system where every transaction must be auditable, reversible, and queryable in multiple ways. The system must handle 50,000 transactions per second.',
+    question: 'Explain the Event Sourcing pattern combined with CQRS. How do you handle event schema evolution over time? What are the trade-offs compared to traditional CRUD?',
+    idealAnswer: `### 1. Event Sourcing Fundamentals
+  Instead of storing the **current state** of an entity, Event Sourcing stores the **sequence of events** that led to that state.
+  * **Traditional CRUD:** \`UPDATE accounts SET balance = 100 WHERE id = 123\`
+  * **Event Sourcing:** \`AccountCreated(id=123)\`, \`MoneyDeposited(id=123, amount=50)\`, \`MoneyDeposited(id=123, amount=50)\`
+  
+  The current state is derived by **replaying** all events.
+  
+  ### 2. CQRS (Command Query Responsibility Segregation)
+  CQRS separates the **write model** (commands) from the **read model** (queries):
+  * **Command Side:** Writes events to an append-only event store (e.g., EventStoreDB, Kafka).
+  * **Query Side:** Projects events into optimized read models (e.g., Elasticsearch, Redis, PostgreSQL).
+  
+  ### 3. Event Schema Evolution
+  This is the hardest part of Event Sourcing. Strategies include:
+  * **Weak Schema:** Events are stored as loosely-typed JSON. New fields are added, old fields are ignored.
+  * **Upcasting:** When loading old events, an upcaster transforms them to the new schema on-the-fly.
+  * **Versioned Events:** Each event has a version number. The system maintains handlers for all versions.
+  * **Event Replacement:** Rarely used, but allows rewriting history (breaks auditability).
+  
+  ### 4. Trade-offs vs CRUD
+  **Pros:**
+  * **Complete Audit Trail:** Every change is recorded.
+  * **Temporal Queries:** You can reconstruct state at any point in time.
+  * **Decoupling:** Events can feed multiple read models without coupling.
+  
+  **Cons:**
+  * **Complexity:** Significantly harder to implement than CRUD.
+  * **Eventual Consistency:** Read models lag behind writes.
+  * **Storage:** Event stores grow indefinitely (requires snapshotting).
+  
+  ### 5. Performance at Scale
+  To handle 50K TPS:
+  * **Partitioning:** Shard events by aggregate ID.
+  * **Snapshots:** Periodically snapshot aggregate state to avoid replaying millions of events.
+  * **Async Projections:** Use Kafka Streams or Flink to project events into read models asynchronously.`,
+    pitfalls: [
+      'Storing mutable state in events (events must be immutable facts).',
+      'Forgetting to implement snapshotting (replay performance degrades over time).',
+      'Over-engineering: Event Sourcing is overkill for simple CRUD use cases.'
+    ],
+    followUpQuestions: [
+      'How do you handle GDPR "right to be forgotten" with immutable events?',
+      'What is the difference between Event Sourcing and Event-Driven Architecture?'
+    ],
+    faangFocus: 'Core pattern at companies like Netflix, Uber, and financial institutions. Tests your ability to design systems with complex auditability and scalability requirements.'
   },
 
   // SPRING BOOT & CLOUD INTERNALS
@@ -745,6 +1040,34 @@ try (Arena arena = Arena.ofConfined()) {
     ],
     faangFocus: 'Extremely relevant for database internals, game engines, and AI/ML infrastructure teams bridging Java with native hardware acceleration.'
   },
+  { 
+    id: 'mod-3',
+    categoryId: 'modern',
+    title: 'HashMap Internal Working and Treeification',
+    difficulty: 'Hard',
+    tags: ['Data Structures', 'Java 8+', 'Collections API'],
+    scenario: 'You need to choose the right data structure for a high-read application and must explain its memory and performance characteristics under heavy hash collisions.',
+    question: 'Explain the complete internal working of HashMap in Java 8+. What happens during hash collision, resize, and treeification?',
+    idealAnswer: `### 1. Hashing and Index Calculation
+When you put a key-value pair, the HashMap first computes the hash code of the key. It then uses the formula **hash AND (capacity - 1)** to find the bucket index, which is mathematically faster than a modulo operation. To spread entropy and reduce collisions in smaller maps, it XORs the hash with its upper 16 bits.
+
+### 2. Collisions and Treeification (Java 8+)
+If the target bucket is empty, a new \`Node\` is created. If not, a collision occurs. The map checks if the key exists using the \`equals()\` method. If it matches, the value is updated; otherwise, it appends the new \`Node\` to a linked list. 
+Crucially, in **Java 8**, if a single bucket accumulates more than 8 entries (\`TREEIFY_THRESHOLD\`) and the table size is at least 64, the linked list is converted to a **Red-Black tree**. This optimizes worst-case lookup time from O(n) to O(log n).
+
+### 3. Resizing and Trade-offs
+When the map's size exceeds the **load factor threshold (default 0.75)**, it triggers a resize. It creates a new array of double the size and rehashes all entries. The 0.75 load factor is a mathematical sweet spot: a lower value reduces collisions but wastes memory, while a higher value saves memory but increases collisions.`,
+    pitfalls: [
+      'Forgetting that treeification requires a minimum table capacity of 64 in addition to the 8-node threshold.',
+      'Failing to explain why the bitwise AND operation is used instead of modulo for index calculation.',
+      'Not mentioning the XOR operation applied to the hash code to spread entropy.'
+    ],
+    followUpQuestions: [
+      'What happens if two objects have the same hash code but are not equal?',
+      'How does ConcurrentHashMap differ from HashMap in Java 8+?'
+    ],
+    faangFocus: 'FAANG interviewers dive deep into data structures. Knowing how HashMap mitigates worst-case O(n) scenarios (via Red-Black trees) demonstrates a deep understanding of algorithmic complexity and Java internals.'
+  },
 
   // PROFILING & DEBUGGING
   {
@@ -816,6 +1139,97 @@ Use **JFR** for continuous, always-on monitoring and broad JVM telemetry (memory
       'What is the difference between CPU profiling and Wall-clock profiling in Async-profiler?'
     ],
     faangFocus: 'Performance engineering absolute basics. If you claim to write high-performance code, you must know how to measure it without observing the "observer effect".'
+  },
+  {
+    id: 'prof-3',
+    categoryId: 'profiling',
+    title: 'Mutable Objects as HashMap Keys',
+    difficulty: 'Expert',
+    tags: ['Memory Leak', 'Hash Code', 'Best Practices'],
+    scenario: 'A production application is experiencing a slow memory leak and frequently failing to retrieve cached items that are confirmed to be in the map.',
+    question: 'You have a custom object as HashMap key. After putting it in the map, you modify a field used in hashCode(). What happens and why?',
+    idealAnswer: `### 1. The Core Mechanism of Hashing
+When you create a custom object and use its fields in the \`hashCode()\` method, you dictate that the bucket position for this key depends on those specific fields. If you calculate a hash code (e.g., 5432) and place the entry in bucket 12, the map expects to find it there.
+
+### 2. The Consequence of Mutation
+If you modify a field used in the hash calculation after insertion, a subsequent call to \`hashCode()\` returns a different value (e.g., 7891), mapping to a new bucket (e.g., 15). When you call \`get()\` with this modified key, the map searches bucket 15, but the entry is still physically sitting in bucket 12. The method returns \`null\` and the key is effectively lost.
+
+### 3. Memory Leaks and Trade-offs
+Because the object cannot be retrieved via standard \`get()\` operations but is still referenced in the underlying array (found via iteration), it becomes **unreachable garbage** from an application logic standpoint, causing a **memory leak**. 
+**Trade-off/Fix:** Always use immutable objects (like \`String\` or \`Integer\`) as HashMap keys. If custom objects are necessary, make them immutable (final class, final fields, defensive copying).`,
+    pitfalls: [
+      'Thinking the HashMap automatically updates the bucket when the object mutates.',
+      'Failing to recognize that this scenario directly causes a memory leak.',
+      'Assuming the object can be safely garbage collected.'
+    ],
+    followUpQuestions: [
+      'How would you design a fully immutable custom class in Java?',
+      'What happens if we override equals() but not hashCode()?'
+    ],
+    faangFocus: 'Top tier companies test for defensive programming. Identifying how mutable state leads to memory leaks proves you can write resilient, production-grade code.'
+  },
+  {
+    id: 'prof-4',
+    categoryId: 'profiling',
+    title: 'Diagnosing GC Overhead Limit Exceeded',
+    difficulty: 'Expert',
+    tags: ['OutOfMemoryError', 'GC Tuning', 'Heap Dump'],
+    scenario: 'The production server has completely frozen. Logs show OutOfMemoryError: GC overhead limit exceeded, and SLA alerts are firing.',
+    question: 'Your application is throwing OutOfMemoryError: GC overhead limit exceeded. How do you diagnose and fix it?',
+    idealAnswer: `### 1. Understanding the Error and Immediate Action
+This error indicates the JVM spent more than **98% of CPU time** doing garbage collection, but recovered less than **2% of heap space**. The application is effectively paralyzed by GC pauses.
+Immediate relief might involve increasing the heap size (\`-Xmx\`) or switching to a modern GC like **G1GC** or **ZGC** (\`-XX:+UseZGC\`) for lower pause times. 
+
+### 2. Diagnosis Strategy
+I would enable GC logging (\`-Xlog:gc*\` in Java 9+, or \`-XX:+PrintGCDetails\` historically) and add \`-XX:+HeapDumpOnOutOfMemoryError\` to automatically capture the state of memory upon crashing.
+Next, I'd analyze the heap dump using Eclipse MAT or VisualVM to identify the largest objects (retained heap) and find the GC roots preventing collection.
+
+### 3. Identifying Root Causes
+Common culprits include:
+1. **Memory Leaks**: Static collections that continually grow without clearing.
+2. **Tight Loops**: Loading entire large files into memory (e.g., \`Files.readAllLines()\`) instead of lazy streaming (\`Files.lines()\`).
+3. **Session Bloat**: Storing massive objects in HTTP sessions.
+4. **Library Bugs**: Third-party caches or loggers leaking references.`,
+    pitfalls: [
+      'Blindly increasing heap size without investigating the root cause, which just delays the inevitable crash.',
+      'Failing to configure automatic heap dumps in production environments.',
+      'Confusing this error with a standard heap space OOM (this specifically denotes CPU thrashing).'
+    ],
+    followUpQuestions: [
+      'How would you safely capture a heap dump from a live, running JVM without crashing it?',
+      'Explain the difference between shallow heap and retained heap in MAT.'
+    ],
+    faangFocus: 'FAANG roles heavily involve maintaining high availability. Proving you have a structured, tool-driven methodology to troubleshoot JVM crashes is critical.'
+  },
+  {
+    id: 'prof-5',
+    categoryId: 'profiling',
+    title: 'Detecting Deadlocks in Production',
+    difficulty: 'Expert',
+    tags: ['Deadlock', 'Thread Dump', 'jstack'],
+    scenario: 'The application suddenly stops processing new requests. CPU usage drops to near zero, but the Java process is still running and consuming memory.',
+    question: 'Your application has a deadlock in production. How do you detect and diagnose it without restarting?',
+    idealAnswer: `### 1. Generating a Thread Dump
+To detect a deadlock without killing the process, you must capture a thread dump of the running JVM. 
+On Linux systems, you can send a \`SIGQUIT\` signal using \`kill -3 <pid>\`, which safely dumps the thread states to standard output or the application log. For a more controlled approach across operating systems, I use the JDK utility **\`jstack <pid>\`** to output the thread trace to a text file.
+
+### 2. Analyzing the Dump
+Once I have the thread dump, I look for threads stuck in the **BLOCKED** state. 
+Modern JVMs are smart—the bottom of a \`jstack\` output will often explicitly identify deadlocks. It will print "Found one Java-level deadlock:" and display the exact threads, the object monitors (locks) they hold, and the locks they are waiting for, clearly revealing the circular dependency.
+
+### 3. Resolution and Prevention
+Once the offending code block is identified, the immediate fix usually requires restarting the application. 
+**Long-term fixes (Trade-offs):** Deadlocks occur due to circular wait. I would refactor the code to ensure all threads acquire locks in a strictly defined, globally consistent order. Alternatively, I would replace \`synchronized\` blocks with \`ReentrantLock\` and use \`tryLock(timeout)\` to gracefully fail and back off instead of waiting infinitely.`,
+    pitfalls: [
+      'Suggesting restarting the server immediately, destroying the diagnostic evidence.',
+      'Recommending heavy profiling tools (like attaching a debugger) which can freeze or crash a production environment.',
+      'Not knowing the difference between BLOCKED (waiting for monitor lock) and WAITING (waiting for a signal/condition).'
+    ],
+    followUpQuestions: [
+      'What are the four necessary conditions for a deadlock to occur (Coffman conditions)?',
+      'How would you resolve a situation where threads are not deadlocked, but livelocked?'
+    ],
+    faangFocus: 'Operational excellence is expected at senior levels. Knowing standard, non-invasive CLI tools like jstack ensures you can debug zero-downtime, mission-critical production systems safely.'
   }
 ];
 
@@ -968,5 +1382,55 @@ Web servers like Tomcat use a **Thread Pool** to handle incoming HTTP requests. 
 If you do not call \`remove()\` on the \`ThreadLocal\`:
 1. The \`User\` object remains strongly referenced by the thread's internal \`ThreadLocalMap\`. This causes a **Heap Memory Leak**.
 2. **Security Vulnerability:** When that same thread is later reused to serve a request for a completely different user, calling \`getUser()\` might return the previous user's cached data!`
+  },
+  {
+    id: 'cd-4',
+    title: 'Stream Parallel Processing with Shared State',
+    categoryId: 'concurrency',
+    difficulty: 'Hard',
+    code: `public class OrderProcessor {
+      private int processedCount = 0;
+      
+      public void processOrders(List<Order> orders) {
+          orders.parallelStream()
+                .forEach(order -> {
+                    processOrder(order);
+                    processedCount++;  // RACE CONDITION!
+                });
+          
+          System.out.println("Processed: " + processedCount);
+      }
+  }`,
+    defectDescription: 'Using parallel streams with a shared mutable counter causes race conditions and incorrect counts.',
+    fixedCode: `public class OrderProcessor {
+      private final AtomicInteger processedCount = new AtomicInteger(0);
+      
+      public void processOrders(List<Order> orders) {
+          orders.parallelStream()
+                .forEach(order -> {
+                    processOrder(order);
+                    processedCount.incrementAndGet();  // Thread-safe!
+                });
+          
+          System.out.println("Processed: " + processedCount.get());
+      }
+  }`,
+    explanation: `### The Defect
+  The \`processedCount++\` operation is **not atomic**. It involves:
+  1. Read the current value
+  2. Increment it
+  3. Write it back
+  
+  In a parallel stream, multiple threads execute this simultaneously, causing **lost updates**. If 1000 orders are processed, you might see "Processed: 847" instead of 1000.
+  
+  ### The Fix
+  Use \`AtomicInteger\` which provides atomic \`incrementAndGet()\` operations using hardware-level CAS (Compare-And-Swap) instructions.
+  
+  **Alternative:** Use \`Collectors.counting()\` to avoid shared state entirely:
+  \`\`\`java
+  long count = orders.parallelStream()
+                     .peek(this::processOrder)
+                     .count();
+  \`\`\``
   }
 ];

@@ -70,51 +70,137 @@ export const Library: React.FC<LibraryProps> = ({ selectedCategory, setSelectedC
     }
   };
 
-  // Helper to safely render simple bullet-formatted text without complex markdown parsers
+  // Comprehensive markdown renderer for interview answers
   const renderFormattedText = (text: string) => {
-    return text.split('\n\n').map((paragraph, pIdx) => {
-      if (paragraph.startsWith('###')) {
+    // Process inline formatting first
+    const processInlineMarkdown = (str: string): React.ReactNode[] => {
+      const parts: React.ReactNode[] = [];
+      // Match **bold**, `code`, and plain text
+      const regex = /(\*\*.*?\*\*|`[^`]+`)/g;
+      let lastIndex = 0;
+      let match;
+      let key = 0;
+
+      while ((match = regex.exec(str)) !== null) {
+        // Add text before the match
+        if (match.index > lastIndex) {
+          parts.push(<span key={key++}>{str.slice(lastIndex, match.index)}</span>);
+        }
+        
+        const matched = match[0];
+        if (matched.startsWith('**') && matched.endsWith('**')) {
+          // Bold text
+          parts.push(
+            <strong key={key++} className="text-white font-semibold">
+              {matched.slice(2, -2)}
+            </strong>
+          );
+        } else if (matched.startsWith('`') && matched.endsWith('`')) {
+          // Inline code
+          parts.push(
+            <code key={key++} className="px-1.5 py-0.5 bg-slate-800 text-indigo-300 rounded text-[11px] font-mono">
+              {matched.slice(1, -1)}
+            </code>
+          );
+        }
+        
+        lastIndex = match.index + matched.length;
+      }
+
+      // Add remaining text
+      if (lastIndex < str.length) {
+        parts.push(<span key={key++}>{str.slice(lastIndex)}</span>);
+      }
+
+      return parts.length > 0 ? parts : [<span key="0">{str}</span>];
+    };
+
+    // Split by double newlines for paragraphs
+    const blocks = text.split('\n\n');
+    
+    return blocks.map((block, pIdx) => {
+      // Handle ### headings
+      if (block.trim().startsWith('###')) {
         return (
-          <h5 key={pIdx} className="font-bold text-white text-xs md:text-sm mt-3 mb-1 border-b border-slate-800 pb-1 text-indigo-300">
-            {paragraph.replace('###', '').trim()}
+          <h5 key={pIdx} className="font-bold text-xs md:text-sm mt-4 mb-2 border-b border-slate-800 pb-1 text-indigo-300">
+            {block.replace(/^###\s*/, '').trim()}
           </h5>
         );
       }
-      
-      // Check if list items
-      if (paragraph.includes('* ')) {
-        const lines = paragraph.split('\n');
+
+      // Handle headings with single #
+      if (block.trim().startsWith('#') && !block.trim().startsWith('###')) {
         return (
-          <ul key={pIdx} className="space-y-1.5 my-2 list-disc list-inside text-slate-300">
-            {lines.map((line, lIdx) => {
-              const cleanLine = line.replace(/^\*\s*/, '');
-              // Bold formatting support: **bold**
-              const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
-              return (
-                <li key={lIdx} className="text-xs md:text-sm leading-relaxed">
-                  {parts.map((part, ptIdx) => {
-                    if (part.startsWith('**') && part.endsWith('**')) {
-                      return <strong key={ptIdx} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
-                    }
-                    return part;
-                  })}
-                </li>
-              );
-            })}
-          </ul>
+          <h5 key={pIdx} className="font-bold text-xs md:text-sm mt-4 mb-2 text-indigo-300">
+            {block.replace(/^#+\s*/, '').trim()}
+          </h5>
         );
       }
 
-      // Default paragraph
-      const parts = paragraph.split(/(\*\*.*?\*\*)/g);
+      // Check if block contains list items (* or -)
+      const lines = block.split('\n');
+      const hasListItems = lines.some(line => /^\s*[\*\-]\s/.test(line));
+      
+      if (hasListItems) {
+        const listItems = lines.filter(line => /^\s*[\*\-]\s/.test(line));
+        const textBefore = lines.filter(line => !/^\s*[\*\-]\s/.test(line) && line.trim().length > 0);
+        
+        return (
+          <div key={pIdx} className="my-2">
+            {textBefore.length > 0 && (
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed mb-2">
+                {processInlineMarkdown(textBefore.join(' '))}
+              </p>
+            )}
+            <ul className="space-y-1 list-disc list-inside text-slate-300">
+              {listItems.map((line, lIdx) => {
+                const cleanLine = line.replace(/^\s*[\*\-]\s*/, '');
+                return (
+                  <li key={lIdx} className="text-xs md:text-sm leading-relaxed">
+                    {processInlineMarkdown(cleanLine)}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      }
+
+      // Handle numbered lists
+      const hasNumberedItems = lines.some(line => /^\s*\d+\.\s/.test(line));
+      
+      if (hasNumberedItems) {
+        const listItems = lines.filter(line => /^\s*\d+\.\s/.test(line));
+        const textBefore = lines.filter(line => !/^\s*\d+\.\s/.test(line) && line.trim().length > 0);
+        
+        return (
+          <div key={pIdx} className="my-2">
+            {textBefore.length > 0 && (
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed mb-2">
+                {processInlineMarkdown(textBefore.join(' '))}
+              </p>
+            )}
+            <ol className="space-y-1 list-decimal list-inside text-slate-300">
+              {listItems.map((line, lIdx) => {
+                const cleanLine = line.replace(/^\s*\d+\.\s*/, '');
+                return (
+                  <li key={lIdx} className="text-xs md:text-sm leading-relaxed">
+                    {processInlineMarkdown(cleanLine)}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        );
+      }
+
+      // Default paragraph with line break support
+      const processedText = block.replace(/\n/g, ' ').trim();
+      if (processedText.length === 0) return null;
+      
       return (
         <p key={pIdx} className="text-xs md:text-sm text-slate-300 leading-relaxed my-2">
-          {parts.map((part, ptIdx) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-              return <strong key={ptIdx} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
-            }
-            return part;
-          })}
+          {processInlineMarkdown(processedText)}
         </p>
       );
     });
