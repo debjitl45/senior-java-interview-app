@@ -1,21 +1,24 @@
 """
-Auto-creates a GitHub PR for a new interview question submitted via GitHub Issue.
-Parses the structured issue form, optionally calls Claude to fill missing fields,
-then commits to a new branch and opens a PR.
+Auto-creates a GitHub PR for a new interview question from a GitHub Issue.
+Uses Google Gemini 1.5 Flash (free tier: 1500 req/day) for AI enrichment.
+No paid APIs needed.
 """
 import os
 import re
 import json
-import time
-import anthropic
+import requests
 from github import Github, GithubException
 
-# ──────────────────────────────────────────────
-# 1. Parse the GitHub Issue form body
-# ──────────────────────────────────────────────
+
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-1.5-flash:generateContent?key={key}"
+)
+
+
 def parse_issue_body(body: str) -> dict:
-    """Extract field values from the GitHub Issue form markdown format."""
-    sections = re.split(r'(?m)^###\s+', body)
+    """Parse GitHub Issue form markdown into a dict of field -> value."""
+    sections = re.split(r'\n### ', '\n' + body)
     fields = {}
     for section in sections:
         if not section.strip():
@@ -29,21 +32,23 @@ def parse_issue_body(body: str) -> dict:
     return fields
 
 
-# ──────────────────────────────────────────────
-# 2. Use Claude to enrich missing fields
-# ──────────────────────────────────────────────
-def enrich_with_ai(fields: dict) -> dict:
-    """Fill idealAnswer, pitfalls, followUpQuestions via Claude if empty."""
-    needs_enrichment = (
+def enrich_with_gemini(fields: dict) -> dict:
+    """Call Gemini 1.5 Flash to fill empty idealAnswer, pitfalls, followUpQuestions."""
+    needs = (
         not fields.get('idealAnswer') or
         not fields.get('pitfalls') or
         not fields.get('followUpQuestions')
     )
-    if not needs_enrichment:
+    if not needs:
+        print("All fields present, skipping Gemini call.")
         return fields
 
-    print("⚡ Calling Claude to enrich missing fields...")
-    client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
+    api_key = os.environ.get('GEMINI_API_KEY', '')
+    if not api_key:
+        print("WARNING: GEMINI_API_KEY not set. Skipping AI enrichment.")
+        return fields
+
+    print("Calling Gemini 1.5 Flash for AI enrichment...")
 
     prompt = f"""You are an expert Java interviewer. Generate missing interview question metadata.
 
@@ -56,38 +61,43 @@ Existing ideal answer: {fields.get('idealAnswer', '(none — generate this)')}
 Existing pitfalls: {fields.get('pitfalls', '(none — generate this)')}
 Existing follow-ups: {fields.get('followUpQuestions', '(none — generate these)')}
 
-Return ONLY a valid JSON object (no markdown) with these keys:
+Return ONLY a valid JSON object (no markdown, no preamble) with these exact keys:
 {{
-  "idealAnswer": "...",
-  "pitfalls": "...",
-  "followUpQuestions": ["...", "...", "..."]
+  "idealAnswer": "3-5 sentence senior-engineer-level answer",
+  "pitfalls": "2-3 specific mistakes candidates commonly make",
+  "followUpQuestions": ["follow-up 1", "follow-up 2", "follow-up 3"]
 }}
-
 Only overwrite fields that were empty above. Preserve existing values verbatim."""
 
-    message = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=1000,
-        messages=[{"role": "user", "content": prompt}]
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"responseMimeType": "application/json"}
+    }
+
+    resp = requests.post(
+        GEMINI_URL.format(key=api_key),
+        json=payload,
+        timeout=30
     )
+    resp.raise_for_status()
+    data = resp.json()
 
-    raw = message.content[0].text.strip()
+    raw = data['candidates'][0]['content']['parts'][0]['text']
     raw = re.sub(r'^```json|```$', '', raw, flags=re.MULTILINE).strip()
-    try:
-        enriched = json.loads(raw)
-    except json.JSONDecodeError:
-    # Fallback: try to find JSON if Claude added text
-        match = re.search(r'\{.*\}', raw, re.DOTALL)
-        if match:
-            enriched = json.loads(match.group())
-        else:
-            print("❌ Failed to parse AI response")
-            return fields
+    enriched = json.loads(raw)
+
+    if not fields.get('idealAnswer'):
+        fields['idealAnswer'] = enriched.get('idealAnswer', '')
+    if not fields.get('pitfalls'):
+        fields['pitfalls'] = enriched.get('pitfalls', '')
+    if not fields.get('followUpQuestions'):
+        fups = enriched.get('followUpQuestions', [])
+        fields['followUpQuestions'] = fups if isinstance(fups, list) else [fups]
+
+    print("Gemini enrichment complete.")
+    return fields
 
 
-# ──────────────────────────────────────────────
-# 3. Build the question object
-# ──────────────────────────────────────────────
 def build_question_obj(fields: dict, issue_number: int) -> dict:
     slug = re.sub(r'[^a-z0-9]+', '-', fields.get('title', 'unknown').lower()).strip('-')[:40]
     question_id = f"q-{slug}-i{issue_number}"
@@ -99,7 +109,7 @@ def build_question_obj(fields: dict, issue_number: int) -> dict:
     if isinstance(follow_ups_raw, list):
         follow_ups = follow_ups_raw
     else:
-        follow_ups = [q.strip() for q in follow_ups_raw.split('\n') if q.strip()]
+        follow_ups = [q.strip() for q in str(follow_ups_raw).split('\n') if q.strip()]
 
     return {
         "id": question_id,
@@ -116,95 +126,73 @@ def build_question_obj(fields: dict, issue_number: int) -> dict:
     }
 
 
-# ──────────────────────────────────────────────
-# 4. Patch the questions.ts file
-# ──────────────────────────────────────────────
-def patch_questions_file(existing_content: str, obj: dict) -> str:
-    """Insert the new question object into the questions array."""
+def patch_questions_file(existing: str, obj: dict) -> str:
     entry = json.dumps(obj, indent=2)
-    # Indent each line by 2 spaces for array member formatting
     indented = '\n'.join('  ' + line for line in entry.split('\n'))
-
-    if 'export const questions' in existing_content:
-        # Find last ] and insert before it
-        insert_at = existing_content.rfind(']')
-        return (
-            existing_content[:insert_at].rstrip().rstrip(',') +
-            ',\n' + indented + '\n' +
-            existing_content[insert_at:]
-        )
-    else:
-        return f"export const questions = [\n{indented}\n];\n"
+    if existing and 'export const questions' in existing:
+        idx = existing.rfind(']')
+        return existing[:idx].rstrip().rstrip(',') + ',\n' + indented + '\n' + existing[idx:]
+    return f"export const questions = [\n{indented}\n];\n"
 
 
-# ──────────────────────────────────────────────
-# 5. Orchestrate: create branch → commit → PR
-# ──────────────────────────────────────────────
 def main():
     repo_name = os.environ['REPO_FULL_NAME']
     issue_number = int(os.environ['ISSUE_NUMBER'])
     issue_body = os.environ['ISSUE_BODY']
 
-    print(f"📋 Processing issue #{issue_number} in {repo_name}")
+    print(f"Processing issue #{issue_number} in {repo_name}")
 
     fields = parse_issue_body(issue_body)
-    print(f"✅ Parsed fields: {list(fields.keys())}")
+    print(f"Parsed fields: {list(fields.keys())}")
 
-    fields = enrich_with_ai(fields)
-    print("✅ AI enrichment done")
+    fields = enrich_with_gemini(fields)
 
     obj = build_question_obj(fields, issue_number)
-    branch_name = f"feat/add-question-{obj['id']}"
-    print(f"🌿 Target branch: {branch_name}")
+    branch = f"feat/add-question-{obj['id']}"
+    print(f"Target branch: {branch}")
 
     g = Github(os.environ['GITHUB_TOKEN'])
     repo = g.get_repo(repo_name)
 
-    # Get current main SHA
-    main_ref = repo.get_git_ref("heads/main")
-    main_sha = main_ref.object.sha
+    main_sha = repo.get_git_ref("heads/main").object.sha
 
-    # Create branch
     try:
-        repo.create_git_ref(ref=f"refs/heads/{branch_name}", sha=main_sha)
-        print(f"✅ Branch {branch_name} created")
+        repo.create_git_ref(ref=f"refs/heads/{branch}", sha=main_sha)
     except GithubException as e:
-        if e.status == 422:
-            print(f"⚠️  Branch already exists, continuing...")
-        else:
+        if e.status != 422:
             raise
+        print("Branch already exists, continuing.")
 
-    # Get existing questions.ts content
     file_path = "src/data/questions.ts"
     try:
-        file_obj = repo.get_contents(file_path, ref="main")
-        existing_content = file_obj.decoded_content.decode('utf-8')
-        file_sha = file_obj.sha
+        f = repo.get_contents(file_path, ref="main")
+        existing = f.decoded_content.decode('utf-8')
+        file_sha = f.sha
     except GithubException:
-        existing_content = ""
+        existing = ""
         file_sha = None
 
-    updated_content = patch_questions_file(existing_content, obj)
-
+    updated = patch_questions_file(existing, obj)
     commit_msg = f"feat: add question — {obj['title'][:60]}\n\nResolves #{issue_number}"
+
     update_kwargs = dict(
         path=file_path,
         message=commit_msg,
-        content=updated_content.encode('utf-8'),
-        branch=branch_name,
+        content=updated.encode('utf-8'),
+        branch=branch,
     )
     if file_sha:
         update_kwargs['sha'] = file_sha
+        repo.update_file(**update_kwargs)
+    else:
+        repo.create_file(**update_kwargs)
 
-    repo.update_file(**update_kwargs) if file_sha else repo.create_file(**update_kwargs)
-    print("✅ File committed")
+    print("File committed.")
 
-    # Create PR
-    pr_body = f"""## 🆕 New interview question (auto-generated from Issue #{issue_number})
+    fups = obj['followUpQuestions']
+    pr_body = f"""## New interview question (from Issue #{issue_number})
 
-**Category:** `{obj['categoryId']}`
-**Difficulty:** `{obj['difficulty']}`
-**FAANG focus:** `{obj['faangFocus']}`
+**Category:** `{obj['categoryId']}`  **Difficulty:** `{obj['difficulty']}`  **FAANG:** `{obj['faangFocus']}`
 **Tags:** {', '.join(f'`{t}`' for t in obj['tags'])}
 
 ---
@@ -219,30 +207,27 @@ def main():
 {obj['pitfalls']}
 
 ### Follow-up questions
-{chr(10).join(f'- {q}' for q in obj['followUpQuestions'])}
+{chr(10).join(f'- {q}' for q in fups)}
 
 ---
-*This PR was auto-created by the question submission workflow. Review the generated content before merging.*
+*Auto-generated by the question submission workflow using Gemini 1.5 Flash (free tier)*
 
 Closes #{issue_number}"""
 
     pr = repo.create_pull(
         title=f"feat: add question — {obj['title'][:60]}",
-        head=branch_name,
+        head=branch,
         base="main",
         body=pr_body,
-        draft=False,
     )
-    print(f"🎉 PR created: {pr.html_url}")
+    print(f"PR created: {pr.html_url}")
 
-    # Comment on the issue with the PR link
-    issue = repo.get_issue(issue_number)
-    issue.create_comment(
-        f"✅ **Auto-PR created:** {pr.html_url}\n\n"
-        f"The question metadata has been generated and a pull request is ready for review. "
-        f"Please check the JSON content before approving the merge."
+    repo.get_issue(issue_number).create_comment(
+        f"PR auto-created: {pr.html_url}\n\n"
+        f"Gemini AI has generated the ideal answer, pitfalls, and follow-up questions. "
+        f"Please review before merging."
     )
-    print("✅ Comment posted on issue")
+    print("Comment posted on issue.")
 
 
 if __name__ == "__main__":
