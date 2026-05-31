@@ -50,24 +50,24 @@ def enrich_with_gemini(fields: dict) -> dict:
 
     print("Calling Gemini 1.5 Flash for AI enrichment...")
 
-        prompt = f"""You are an expert Java interviewer. Generate missing interview question metadata.
+    prompt = f"""You are an expert Java interviewer. Generate missing interview question metadata.
 
-Category: {fields.get('Category', 'general')}
-Difficulty: {fields.get('Difficulty', 'medium')}
-Title: {fields.get('Question title', '')}
-Scenario: {fields.get('Scenario / context', '')}
-Question: {fields.get('The interview question', '')}
-Existing ideal answer: {fields.get('Ideal answer', '(none — generate this)')}
-Existing pitfalls: {fields.get('Common pitfalls', '(none — generate this)')}
-Existing follow-ups: {fields.get('Follow-up questions', '(none — generate these)')}
+            Category: {fields.get('Category', 'general')}
+            Difficulty: {fields.get('Difficulty', 'medium')}
+            Title: {fields.get('Question title', '')}
+            Scenario: {fields.get('Scenario / context', '')}
+            Question: {fields.get('The interview question', '')}
+            Existing ideal answer: {fields.get('Ideal answer', '(none — generate this)')}
+            Existing pitfalls: {fields.get('Common pitfalls', '(none — generate this)')}
+            Existing follow-ups: {fields.get('Follow-up questions', '(none — generate these)')}
 
-Return ONLY a valid JSON object (no markdown, no preamble) with these exact keys:
-{{
-  "idealAnswer": "3-5 sentence senior-engineer-level answer",
-  "pitfalls": "2-3 specific mistakes candidates commonly make",
-  "followUpQuestions": ["follow-up 1", "follow-up 2", "follow-up 3"]
-}}
-Only overwrite fields that were empty above. Preserve existing values verbatim."""
+            Return ONLY a valid JSON object (no markdown, no preamble) with these exact keys:
+            {{
+            "idealAnswer": "3-5 sentence senior-engineer-level answer",
+            "pitfalls": "2-3 specific mistakes candidates commonly make",
+            "followUpQuestions": ["follow-up 1", "follow-up 2", "follow-up 3"]
+            }}
+            Only overwrite fields that were empty above. Preserve existing values verbatim."""
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
