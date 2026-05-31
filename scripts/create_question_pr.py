@@ -151,7 +151,7 @@ def main():
     branch = f"feat/add-question-{obj['id']}"
     print(f"Target branch: {branch}")
 
-    g = Github(os.environ['GITHUB_TOKEN'])
+    g = Github(os.environ['PAT_TOKEN'])
     repo = g.get_repo(repo_name)
 
     main_sha = repo.get_git_ref("heads/main").object.sha
