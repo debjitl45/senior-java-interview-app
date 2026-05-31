@@ -50,16 +50,16 @@ def enrich_with_gemini(fields: dict) -> dict:
 
     print("Calling Gemini 1.5 Flash for AI enrichment...")
 
-    prompt = f"""You are an expert Java interviewer. Generate missing interview question metadata.
+        prompt = f"""You are an expert Java interviewer. Generate missing interview question metadata.
 
-Category: {fields.get('categoryId', 'general')}
-Difficulty: {fields.get('difficulty', 'medium')}
-Title: {fields.get('title', '')}
-Scenario: {fields.get('scenario', '')}
-Question: {fields.get('question', '')}
-Existing ideal answer: {fields.get('idealAnswer', '(none — generate this)')}
-Existing pitfalls: {fields.get('pitfalls', '(none — generate this)')}
-Existing follow-ups: {fields.get('followUpQuestions', '(none — generate these)')}
+Category: {fields.get('Category', 'general')}
+Difficulty: {fields.get('Difficulty', 'medium')}
+Title: {fields.get('Question title', '')}
+Scenario: {fields.get('Scenario / context', '')}
+Question: {fields.get('The interview question', '')}
+Existing ideal answer: {fields.get('Ideal answer', '(none — generate this)')}
+Existing pitfalls: {fields.get('Common pitfalls', '(none — generate this)')}
+Existing follow-ups: {fields.get('Follow-up questions', '(none — generate these)')}
 
 Return ONLY a valid JSON object (no markdown, no preamble) with these exact keys:
 {{
@@ -99,13 +99,13 @@ Only overwrite fields that were empty above. Preserve existing values verbatim."
 
 
 def build_question_obj(fields: dict, issue_number: int) -> dict:
-    slug = re.sub(r'[^a-z0-9]+', '-', fields.get('title', 'unknown').lower()).strip('-')[:40]
+    slug = re.sub(r'[^a-z0-9]+', '-', fields.get('Question title', 'unknown').lower()).strip('-')[:40]
     question_id = f"q-{slug}-i{issue_number}"
 
-    tags_raw = fields.get('tags', '')
+    tags_raw = fields.get('Tags (comma-separated)', '')
     tags = [t.strip().lower().replace(' ', '-') for t in tags_raw.split(',') if t.strip()]
 
-    follow_ups_raw = fields.get('followUpQuestions', '')
+    follow_ups_raw = fields.get('Follow-up questions', '')
     if isinstance(follow_ups_raw, list):
         follow_ups = follow_ups_raw
     else:
@@ -113,16 +113,16 @@ def build_question_obj(fields: dict, issue_number: int) -> dict:
 
     return {
         "id": question_id,
-        "categoryId": fields.get('categoryId', '').strip(),
-        "title": fields.get('title', '').strip(),
-        "difficulty": fields.get('difficulty', 'medium').strip(),
+        "category": fields.get('Category', '').strip(),
+        "title": fields.get('Question title', '').strip(),
+        "difficulty": fields.get('Difficulty', 'medium').strip(),
         "tags": tags,
-        "scenario": fields.get('scenario', '').strip(),
-        "question": fields.get('question', '').strip(),
-        "idealAnswer": fields.get('idealAnswer', '').strip(),
-        "pitfalls": fields.get('pitfalls', '').strip(),
+        "scenario": fields.get('Scenario / context', '').strip(),
+        "question": fields.get('The interview question', '').strip(),
+        "idealAnswer": fields.get('Ideal answer', '').strip(),
+        "pitfalls": fields.get('Common pitfalls', '').strip(),
         "followUpQuestions": follow_ups,
-        "faangFocus": fields.get('faangFocus', 'false').strip().lower() == 'true',
+        "faangFocus": fields.get('FAANG-level question?', 'false').strip().lower() == 'true',
     }
 
 
