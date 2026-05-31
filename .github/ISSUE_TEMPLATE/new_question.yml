@@ -1,5 +1,5 @@
 name: ➕ Submit a new interview question
-description: Propose a new Java interview question. A PR will be auto-created.
+description: Propose a new Java interview question. A PR will be auto-created using Gemini AI (free).
 title: "[QUESTION] "
 labels: ["new-question", "automated-pr"]
 body:
@@ -8,18 +8,12 @@ body:
     attributes:
       label: Category
       options:
-        - core-java
-        - concurrency
-        - jvm-internals
-        - collections
-        - spring-boot
-        - spring-security
-        - microservices
-        - kafka
-        - design-patterns
-        - system-design
-        - sql-databases
-        - data-structures
+        - jvm
+        - conc
+        - arch
+        - mod
+        - spring
+        - prof
     validations:
       required: true
 
