@@ -15,7 +15,7 @@ from github import Github, GithubException
 # ──────────────────────────────────────────────
 def parse_issue_body(body: str) -> dict:
     """Extract field values from the GitHub Issue form markdown format."""
-    sections = re.split(r'\n### ', '\n' + body)
+    sections = re.split(r'(?m)^###\s+', body)
     fields = {}
     for section in sections:
         if not section.strip():
@@ -66,7 +66,7 @@ Return ONLY a valid JSON object (no markdown) with these keys:
 Only overwrite fields that were empty above. Preserve existing values verbatim."""
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -74,7 +74,6 @@ Only overwrite fields that were empty above. Preserve existing values verbatim."
     raw = message.content[0].text.strip()
     raw = re.sub(r'^```json|```$', '', raw, flags=re.MULTILINE).strip()
     enriched = json.loads(raw)
-
     if not fields.get('idealAnswer'):
         fields['idealAnswer'] = enriched.get('idealAnswer', '')
     if not fields.get('pitfalls'):
