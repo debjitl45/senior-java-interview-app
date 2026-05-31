@@ -39,13 +39,26 @@ def enrich_with_ai(fields: dict) -> dict:
         not fields.get('Common pitfalls') or
         not fields.get('Follow-up questions')
     )
+    
+    print(f"DEBUG: Ideal answer: '{fields.get('Ideal answer')}'")
+    print(f"DEBUG: Common pitfalls: '{fields.get('Common pitfalls')}'")
+    print(f"DEBUG: Follow-up questions: '{fields.get('Follow-up questions')}'")
+    print(f"DEBUG: needs_enrichment = {needs_enrichment}")
+    
     if not needs_enrichment:
+        print("✅ All fields have responses, skipping AI enrichment")
         return fields
 
     print("⚡ Calling Claude to enrich missing fields...")
-    client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
+    try:
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            print("❌ ERROR: ANTHROPIC_API_KEY not set in environment")
+            return fields
+            
+        client = anthropic.Anthropic(api_key=api_key)
 
-    prompt = f"""You are an expert Java interviewer. Generate missing interview question metadata.
+        prompt = f"""You are an expert Java interviewer. Generate missing interview question metadata.
 
 Category: {fields.get('Category', 'general')}
 Difficulty: {fields.get('Difficulty', 'medium')}
@@ -65,38 +78,54 @@ Return ONLY a valid JSON object (no markdown) with these keys:
 
 Only overwrite fields that were empty above. Preserve existing values verbatim."""
 
-    message = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=1000,
-        messages=[{"role": "user", "content": prompt}]
-    )
+        print("📤 Sending request to Claude API...")
+        message = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        )
 
-    raw = message.content[0].text.strip()
-    raw = re.sub(r'^```json|```$', '', raw, flags=re.MULTILINE).strip()
-    try:
-        enriched = json.loads(raw)
-        # Update fields with enriched data
-        for key, value in enriched.items():
-            if not fields.get(key):
-                fields[key] = value
-        return fields
-    except json.JSONDecodeError as e:
-        # Fallback: try to find JSON if Claude added text
-        match = re.search(r'\{.*\}', raw, re.DOTALL)
-        if match:
-            try:
-                enriched = json.loads(match.group())
-                # Update fields with enriched data
-                for key, value in enriched.items():
-                    if not fields.get(key):
-                        fields[key] = value
-                return fields
-            except json.JSONDecodeError:
-                print(f"❌ Failed to parse AI response: {e}")
-                return fields
-        else:
-            print("❌ Failed to parse AI response")
+        raw = message.content[0].text.strip()
+        print(f"📥 Claude response (first 200 chars): {raw[:200]}...")
+        
+        raw = re.sub(r'^```json|```$', '', raw, flags=re.MULTILINE).strip()
+        
+        try:
+            enriched = json.loads(raw)
+            print(f"✅ Parsed JSON successfully: {list(enriched.keys())}")
+            # Update fields with enriched data
+            for key, value in enriched.items():
+                if not fields.get(key):
+                    fields[key] = value
+                    print(f"  → Added '{key}': {value[:50]}...")
             return fields
+        except json.JSONDecodeError as e:
+            print(f"⚠️  First JSON parse failed: {e}")
+            # Fallback: try to find JSON if Claude added text
+            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if match:
+                try:
+                    enriched = json.loads(match.group())
+                    print(f"✅ Parsed JSON from fallback search: {list(enriched.keys())}")
+                    # Update fields with enriched data
+                    for key, value in enriched.items():
+                        if not fields.get(key):
+                            fields[key] = value
+                            print(f"  → Added '{key}': {value[:50]}...")
+                    return fields
+                except json.JSONDecodeError as e2:
+                    print(f"❌ Failed to parse fallback JSON: {e2}")
+                    print(f"Raw response was: {raw[:500]}")
+                    return fields
+            else:
+                print("❌ Could not find JSON object in response")
+                print(f"Raw response was: {raw[:500]}")
+                return fields
+    except Exception as e:
+        print(f"❌ ERROR calling Claude API: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        return fields
 
 
 # ──────────────────────────────────────────────
