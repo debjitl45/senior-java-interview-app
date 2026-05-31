@@ -35,9 +35,9 @@ def parse_issue_body(body: str) -> dict:
 def enrich_with_ai(fields: dict) -> dict:
     """Fill idealAnswer, pitfalls, followUpQuestions via Claude if empty."""
     needs_enrichment = (
-        not fields.get('idealAnswer') or
-        not fields.get('pitfalls') or
-        not fields.get('followUpQuestions')
+        not fields.get('Ideal answer') or
+        not fields.get('Common pitfalls') or
+        not fields.get('Follow-up questions')
     )
     if not needs_enrichment:
         return fields
@@ -47,20 +47,20 @@ def enrich_with_ai(fields: dict) -> dict:
 
     prompt = f"""You are an expert Java interviewer. Generate missing interview question metadata.
 
-Category: {fields.get('categoryId', 'general')}
-Difficulty: {fields.get('difficulty', 'medium')}
-Title: {fields.get('title', '')}
-Scenario: {fields.get('scenario', '')}
-Question: {fields.get('question', '')}
-Existing ideal answer: {fields.get('idealAnswer', '(none — generate this)')}
-Existing pitfalls: {fields.get('pitfalls', '(none — generate this)')}
-Existing follow-ups: {fields.get('followUpQuestions', '(none — generate these)')}
+Category: {fields.get('Category', 'general')}
+Difficulty: {fields.get('Difficulty', 'medium')}
+Title: {fields.get('Question title', '')}
+Scenario: {fields.get('Scenario / context', '')}
+Question: {fields.get('The interview question', '')}
+Existing ideal answer: {fields.get('Ideal answer', '(none — generate this)')}
+Existing pitfalls: {fields.get('Common pitfalls', '(none — generate this)')}
+Existing follow-ups: {fields.get('Follow-up questions', '(none — generate these)')}
 
 Return ONLY a valid JSON object (no markdown) with these keys:
 {{
-  "idealAnswer": "...",
-  "pitfalls": "...",
-  "followUpQuestions": ["...", "...", "..."]
+  "Ideal answer": "...",
+  "Common pitfalls": "...",
+  "Follow-up questions": "...\n...\n..."
 }}
 
 Only overwrite fields that were empty above. Preserve existing values verbatim."""
@@ -75,11 +75,25 @@ Only overwrite fields that were empty above. Preserve existing values verbatim."
     raw = re.sub(r'^```json|```$', '', raw, flags=re.MULTILINE).strip()
     try:
         enriched = json.loads(raw)
-    except json.JSONDecodeError:
-    # Fallback: try to find JSON if Claude added text
+        # Update fields with enriched data
+        for key, value in enriched.items():
+            if not fields.get(key):
+                fields[key] = value
+        return fields
+    except json.JSONDecodeError as e:
+        # Fallback: try to find JSON if Claude added text
         match = re.search(r'\{.*\}', raw, re.DOTALL)
         if match:
-            enriched = json.loads(match.group())
+            try:
+                enriched = json.loads(match.group())
+                # Update fields with enriched data
+                for key, value in enriched.items():
+                    if not fields.get(key):
+                        fields[key] = value
+                return fields
+            except json.JSONDecodeError:
+                print(f"❌ Failed to parse AI response: {e}")
+                return fields
         else:
             print("❌ Failed to parse AI response")
             return fields
@@ -89,13 +103,13 @@ Only overwrite fields that were empty above. Preserve existing values verbatim."
 # 3. Build the question object
 # ──────────────────────────────────────────────
 def build_question_obj(fields: dict, issue_number: int) -> dict:
-    slug = re.sub(r'[^a-z0-9]+', '-', fields.get('title', 'unknown').lower()).strip('-')[:40]
+    slug = re.sub(r'[^a-z0-9]+', '-', fields.get('Question title', 'unknown').lower()).strip('-')[:40]
     question_id = f"q-{slug}-i{issue_number}"
 
-    tags_raw = fields.get('tags', '')
+    tags_raw = fields.get('Tags (comma-separated)', '')
     tags = [t.strip().lower().replace(' ', '-') for t in tags_raw.split(',') if t.strip()]
 
-    follow_ups_raw = fields.get('followUpQuestions', '')
+    follow_ups_raw = fields.get('Follow-up questions', '')
     if isinstance(follow_ups_raw, list):
         follow_ups = follow_ups_raw
     else:
@@ -103,16 +117,16 @@ def build_question_obj(fields: dict, issue_number: int) -> dict:
 
     return {
         "id": question_id,
-        "categoryId": fields.get('categoryId', '').strip(),
-        "title": fields.get('title', '').strip(),
-        "difficulty": fields.get('difficulty', 'medium').strip(),
+        "category": fields.get('Category', '').strip(),
+        "title": fields.get('Question title', '').strip(),
+        "difficulty": fields.get('Difficulty', 'medium').strip(),
         "tags": tags,
-        "scenario": fields.get('scenario', '').strip(),
-        "question": fields.get('question', '').strip(),
-        "idealAnswer": fields.get('idealAnswer', '').strip(),
-        "pitfalls": fields.get('pitfalls', '').strip(),
+        "scenario": fields.get('Scenario / context', '').strip(),
+        "question": fields.get('The interview question', '').strip(),
+        "idealAnswer": fields.get('Ideal answer', '').strip(),
+        "pitfalls": fields.get('Common pitfalls', '').strip(),
         "followUpQuestions": follow_ups,
-        "faangFocus": fields.get('faangFocus', 'false').strip().lower() == 'true',
+        "faangFocus": fields.get('FAANG-level question?', 'false').strip().lower() == 'true',
     }
 
 
@@ -202,7 +216,7 @@ def main():
     # Create PR
     pr_body = f"""## 🆕 New interview question (auto-generated from Issue #{issue_number})
 
-**Category:** `{obj['categoryId']}`
+**Category:** `{obj['category']}`
 **Difficulty:** `{obj['difficulty']}`
 **FAANG focus:** `{obj['faangFocus']}`
 **Tags:** {', '.join(f'`{t}`' for t in obj['tags'])}
