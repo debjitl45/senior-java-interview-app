@@ -73,16 +73,16 @@ Only overwrite fields that were empty above. Preserve existing values verbatim."
 
     raw = message.content[0].text.strip()
     raw = re.sub(r'^```json|```$', '', raw, flags=re.MULTILINE).strip()
-    enriched = json.loads(raw)
-    if not fields.get('idealAnswer'):
-        fields['idealAnswer'] = enriched.get('idealAnswer', '')
-    if not fields.get('pitfalls'):
-        fields['pitfalls'] = enriched.get('pitfalls', '')
-    if not fields.get('followUpQuestions'):
-        fups = enriched.get('followUpQuestions', [])
-        fields['followUpQuestions'] = fups if isinstance(fups, list) else [fups]
-
-    return fields
+    try:
+        enriched = json.loads(raw)
+    except json.JSONDecodeError:
+    # Fallback: try to find JSON if Claude added text
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            enriched = json.loads(match.group())
+        else:
+            print("❌ Failed to parse AI response")
+            return fields
 
 
 # ──────────────────────────────────────────────
