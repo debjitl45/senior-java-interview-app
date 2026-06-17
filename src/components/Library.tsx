@@ -216,7 +216,7 @@ export const Library: React.FC<LibraryProps> = ({ selectedCategory, setSelectedC
             Interview Questions Library
           </h2>
           <p className="text-xs md:text-sm text-slate-400">
-            Showing {filteredQuestions.length} deep-dive questions curated for 10+ YOE developers.
+            Showing {filteredQuestions.length} deep-dive questions curated for 5+ YOE developers.
           </p>
         </div>
 

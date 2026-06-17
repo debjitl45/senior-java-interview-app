@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { RotateCw } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { RotateCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { QUESTIONS, CATEGORIES } from '../data/questions';
 
 export const Flashcards: React.FC = () => {
-  const { rateFlashcard } = useApp();
   
+  // const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // const [currentIndex, setCurrentIndex] = useState<number>(0);
+  // const [isFlipped, setIsFlipped] = useState<boolean>(false);
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
+
+  const [startX, setStartX] = useState<number | null>(null);
+  const [wasSwipe, setWasSwipe] = useState(false);
 
   // Filter pool
   const pool = selectedCategory 
@@ -18,22 +23,54 @@ export const Flashcards: React.FC = () => {
   const currentQ = pool[currentIndex];
 
   const handleFlip = () => {
+    if (wasSwipe) {
+      setWasSwipe(false);
+      return;
+    }
+  
     setIsFlipped(!isFlipped);
   };
 
-  const handleRate = (rating: 'Again' | 'Hard' | 'Good' | 'Easy') => {
-    if (currentQ) {
-      rateFlashcard(currentQ.id, rating);
-    }
-    
-    // Proceed to next card
+  const nextCard = () => {
     setIsFlipped(false);
+  
     if (currentIndex + 1 < pool.length) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Loop back or simple finish
       setCurrentIndex(0);
     }
+  };
+  
+  const previousCard = () => {
+    setIsFlipped(false);
+  
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    } else {
+      setCurrentIndex(pool.length - 1);
+    }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setStartX(e.clientX);
+  };
+  
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (startX === null) return;
+  
+    const delta = e.clientX - startX;
+  
+    if (Math.abs(delta) > 70) {
+      setWasSwipe(true);
+  
+      if (delta < 0) {
+        nextCard();
+      } else {
+        previousCard();
+      }
+    }
+  
+    setStartX(null);
   };
 
   // Safe layout render
@@ -119,9 +156,12 @@ export const Flashcards: React.FC = () => {
           </div>
 
           {/* The Flip Card */}
-          <div 
-            onClick={handleFlip}
-            className={`min-h-[320px] bg-slate-900 hover:bg-slate-900/90 rounded-2xl border border-slate-800 p-6 md:p-8 flex flex-col justify-between cursor-pointer transition-all select-none relative group shadow-xl ${
+          <div
+              onClick={handleFlip}
+              onPointerDown={handlePointerDown}
+              onPointerUp={handlePointerUp}
+              className={`min-h-[320px]
+              bg-slate-900 hover:bg-slate-900/90 rounded-2xl border border-slate-800 p-6 md:p-8 flex flex-col justify-between cursor-pointer transition-all select-none relative group shadow-xl ${
               isFlipped ? 'border-indigo-500/30 bg-slate-950/80' : ''
             }`}
           >
@@ -174,56 +214,28 @@ export const Flashcards: React.FC = () => {
           </div>
 
           {/* Rating Controls */}
-          {isFlipped && (
-            <div className="space-y-2 fade-in">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block text-center">
-                How well did you know this?
-              </span>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRate('Again');
-                  }}
-                  className="py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-xs font-bold border border-rose-500/20 transition-colors"
-                >
-                  Again (Reset)
-                </button>
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRate('Hard');
-                  }}
-                  className="py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl text-xs font-bold border border-amber-500/20 transition-colors"
-                >
-                  Hard
-                </button>
+          <div className="flex gap-3">
+              <button
+                onClick={previousCard}
+                className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                <ChevronLeft size={18} />
+                Previous
+              </button>
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRate('Good');
-                  }}
-                  className="py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-xl text-xs font-bold border border-indigo-500/20 transition-colors"
-                >
-                  Good
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRate('Easy');
-                  }}
-                  className="py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl text-xs font-bold border border-emerald-500/20 transition-colors"
-                >
-                  Easy
-                </button>
-              </div>
+              <button
+                onClick={nextCard}
+                className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                Next
+                <ChevronRight size={18} />
+              </button>
             </div>
-          )}
 
+            <div className="text-center text-xs text-slate-500">
+              Swipe left for next card • Swipe right for previous card
+            </div>
         </div>
       ) : (
         <div className="text-center py-12 text-slate-500">
