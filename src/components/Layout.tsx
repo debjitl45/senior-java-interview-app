@@ -42,7 +42,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
             </div>
             <div>
               <h1 className="font-bold text-base tracking-tight leading-none text-white">JavaMaster Pro</h1>
-              <span className="text-[11px] text-indigo-400 font-medium uppercase tracking-wider">10+ YOE Senior Prep</span>
+              <span className="text-[11px] text-indigo-400 font-medium uppercase tracking-wider">Engineer Your Promotion</span>
             </div>
           </div>
         </div>
@@ -105,7 +105,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight text-white leading-none">JavaMaster Pro</h1>
-              <span className="text-[10px] text-indigo-400 font-medium">Senior • 10+ YOE</span>
+              <span className="text-[10px] text-indigo-400 font-medium">Senior • 5+ YOE</span>
             </div>
           </div>
 

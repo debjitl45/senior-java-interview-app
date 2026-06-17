@@ -115,7 +115,7 @@ export const ComplianceInfo: React.FC = () => {
                 <div>
                   <span className="text-xs font-semibold text-white block">No Infringing IP</span>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Original expert-curated technical knowledge tailored for 10+ YOE Senior & Staff roles. No scraped copyright material.
+                    Original expert-curated technical knowledge tailored for 5+ YOE Senior & Staff roles. No scraped copyright material.
                   </p>
                 </div>
               </div>

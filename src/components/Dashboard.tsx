@@ -50,7 +50,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedC
 
   const proTips = [
     "When discussing ZGC, emphasize that Load Barriers handle self-healing concurrently. Mention Allocation Stalls as the primary failure mode under sudden heap exhaustion.",
-    "In System Design for 10+ YOE, never present a single static architecture. Present the trade-offs: optimize for write-heavy (LSM-trees, Cassandra) vs read-heavy (B-Trees, Redis caches).",
+    "In System Design for 5+ YOE, never present a single static architecture. Present the trade-offs: optimize for write-heavy (LSM-trees, Cassandra) vs read-heavy (B-Trees, Redis caches).",
     "For Virtual Threads, clearly articulate that they do not increase single-threaded latency speed—they provide massive concurrency. Identify synchronized blocks as the root cause of carrier thread pinning.",
     "When explaining Spring proxies, always trace the 'self-invocation' limitation. Tier-1 interviewers love candidates who understand runtime bytecode manipulation.",
     "If asked about Distributed Transactions, immediately rule out 2PC for microservices due to its blocking locks. Propose Orchestrated Sagas with idempotent compensating transactions."
@@ -78,7 +78,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedC
               Welcome Back, Architect
             </h2>
             <p className="text-sm text-slate-300 max-w-xl">
-              Master the exact rigorous interview patterns tested by FAANG and Tier-1 engineering teams for 10+ YOE roles.
+              Master the exact rigorous interview patterns tested by Tier-1 engineering teams for Senior Engineer roles.
             </p>
           </div>
 
