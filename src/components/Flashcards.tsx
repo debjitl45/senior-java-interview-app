@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion'; 
 import { RotateCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { QUESTIONS, CATEGORIES } from '../data/questions';
 
 export const Flashcards: React.FC = () => {
   
-  // const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  // const [currentIndex, setCurrentIndex] = useState<number>(0);
-  // const [isFlipped, setIsFlipped] = useState<boolean>(false);
-
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
@@ -156,15 +153,29 @@ export const Flashcards: React.FC = () => {
           </div>
 
           {/* The Flip Card */}
-          <div
-              onClick={handleFlip}
-              onPointerDown={handlePointerDown}
-              onPointerUp={handlePointerUp}
-              className={`min-h-[320px]
-              bg-slate-900 hover:bg-slate-900/90 rounded-2xl border border-slate-800 p-6 md:p-8 flex flex-col justify-between cursor-pointer transition-all select-none relative group shadow-xl ${
-              isFlipped ? 'border-indigo-500/30 bg-slate-950/80' : ''
-            }`}
-          >
+          <motion.div
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.3}
+                whileDrag={{
+                  scale: 1.02,
+                  rotate: 3
+                }}
+                onDragEnd={(_, info) => {
+                  const threshold = 100;
+
+                  if (info.offset.x < -threshold) {
+                    nextCard();
+                  } else if (info.offset.x > threshold) {
+                    previousCard();
+                  }
+                }}
+                onClick={handleFlip}
+                className={`min-h-[320px] bg-slate-900 hover:bg-slate-900/90 rounded-2xl border border-slate-800 p-6 md:p-8 flex flex-col justify-between cursor-pointer transition-all select-none relative group shadow-xl ${
+                  isFlipped ? 'border-indigo-500/30 bg-slate-950/80' : ''
+                }`}
+              >
+
             {/* Top Tag */}
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-slate-950 px-2.5 py-1 rounded-md border border-slate-800">
@@ -211,8 +222,8 @@ export const Flashcards: React.FC = () => {
             <div className="text-center text-[11px] text-slate-600">
               {!isFlipped ? 'Think through your answer before flipping' : 'Rate your retention below'}
             </div>
-          </div>
-
+          </motion.div>
+              
           {/* Rating Controls */}
 
           <div className="flex gap-3">
