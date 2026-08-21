@@ -9,23 +9,19 @@ import { Flashcards } from './components/Flashcards';
 import { ComplianceInfo } from './components/ComplianceInfo';
 
 const AppContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
 
-  const renderContent = () => {
+  const content = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return (
-          <Dashboard 
-            setActiveTab={setActiveTab} 
-            setSelectedCategory={setSelectedCategory} 
-          />
-        );
       case 'library':
         return (
-          <Library 
-            selectedCategory={selectedCategory} 
-            setSelectedCategory={setSelectedCategory} 
+          <Library
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            selectedTrack={selectedTrack}
+            setSelectedTrack={setSelectedTrack}
           />
         );
       case 'defects':
@@ -36,11 +32,13 @@ const AppContent: React.FC = () => {
         return <Flashcards />;
       case 'info':
         return <ComplianceInfo />;
+      case 'dashboard':
       default:
         return (
-          <Dashboard 
-            setActiveTab={setActiveTab} 
-            setSelectedCategory={setSelectedCategory} 
+          <Dashboard
+            setActiveTab={setActiveTab}
+            setSelectedCategory={setSelectedCategory}
+            setSelectedTrack={setSelectedTrack}
           />
         );
     }
@@ -48,7 +46,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {renderContent()}
+      {content()}
     </Layout>
   );
 };

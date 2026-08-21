@@ -1,16 +1,19 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  Bug, 
-  PlaySquare, 
-  Layers, 
-  ShieldCheck, 
-  Volume2, 
+import { motion } from 'framer-motion';
+import {
+  BookOpen,
+  Bug,
+  Flame,
+  Home,
+  Layers,
+  Mic,
+  User,
+  Volume2,
   VolumeX,
-  Sparkles
+  type LucideIcon,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { Progress, Tappable } from './ui';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,143 +21,176 @@ interface LayoutProps {
   setActiveTab: (tab: string) => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
-  const { state, toggleVoice } = useApp();
+interface NavItem {
+  id: string;
+  label: string;
+  short: string;
+  icon: LucideIcon;
+}
 
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'library', label: 'Library', icon: BookOpen },
-    { id: 'defects', label: 'Spot Defect', icon: Bug },
-    { id: 'interview', label: 'Simulator', icon: PlaySquare },
-    { id: 'flashcards', label: 'Flashcards', icon: Layers },
-    { id: 'info', label: 'Compliance', icon: ShieldCheck },
-  ];
+const NAV: NavItem[] = [
+  { id: 'dashboard', label: 'Home', short: 'Home', icon: Home },
+  { id: 'library', label: 'Question Library', short: 'Learn', icon: BookOpen },
+  { id: 'flashcards', label: 'Flashcards', short: 'Cards', icon: Layers },
+  { id: 'defects', label: 'Spot the Bug', short: 'Bugs', icon: Bug },
+  { id: 'interview', label: 'Mock Interview', short: 'Mock', icon: Mic },
+  { id: 'info', label: 'Profile & Data', short: 'You', icon: User },
+];
+
+const Wordmark: React.FC<{ compact?: boolean }> = ({ compact }) => (
+  <div className="flex items-center gap-2.5">
+    <div className="ring-brand bg-brand grid h-9 w-9 place-items-center rounded-xl shadow-lg shadow-fuchsia-500/20">
+      <span className="font-mono text-base font-black text-white">J</span>
+    </div>
+    <div className="leading-none">
+      <h1 className="font-display text-[15px] font-bold text-white">
+        Java<span className="text-brand">Master</span>
+      </h1>
+      {!compact && (
+        <span className="mt-0.5 block text-[10px] font-semibold tracking-wide text-[var(--dim)]">
+          get the offer. no cap.
+        </span>
+      )}
+    </div>
+  </div>
+);
+
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
+  const { state, stats, toggleVoice } = useApp();
 
   return (
-    <div className="flex h-full w-full bg-slate-950 text-slate-100 overflow-hidden">
-      
-      {/* Desktop / Tablet Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-slate-900 border-r border-slate-800 shrink-0 select-none">
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <span className="font-mono font-bold text-lg text-white">J</span>
-            </div>
-            <div>
-              <h1 className="font-bold text-base tracking-tight leading-none text-white">JavaMaster Pro</h1>
-              <span className="text-[11px] text-indigo-400 font-medium uppercase tracking-wider">Engineer Your Promotion</span>
-            </div>
-          </div>
+    <div className="relative flex h-full w-full overflow-hidden bg-[var(--bg)] text-[var(--text)]">
+      <div className="aurora" aria-hidden />
+      <div className="grain" aria-hidden />
+
+      {/* ---------------- Desktop rail ---------------- */}
+      <aside className="relative z-10 hidden w-[268px] shrink-0 flex-col border-r border-white/[0.07] bg-black/25 backdrop-blur-xl select-none md:flex">
+        <div className="px-5 pt-6 pb-5">
+          <Wordmark />
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <div className="px-3 pb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-            Navigation
-          </div>
-          {navItems.map((item) => {
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+          <div className="eyebrow px-3 pb-2">Menu</div>
+          {NAV.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
-              <button
+              <Tappable
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/20 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                  isActive ? 'text-white' : 'text-[var(--muted)] hover:text-white'
                 }`}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
-                {item.label}
-                {item.id === 'defects' && (
-                  <span className="ml-auto text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded font-mono border border-amber-500/20">
-                    Pro
-                  </span>
+                {isActive && (
+                  <motion.span
+                    layoutId="railActive"
+                    className="absolute inset-0 rounded-xl border border-white/[0.1] bg-white/[0.07]"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
                 )}
-              </button>
+                <Icon className={`relative h-[18px] w-[18px] ${isActive ? 'text-[var(--brand-2)]' : ''}`} />
+                <span className="relative">{item.label}</span>
+              </Tappable>
             );
           })}
         </nav>
 
-        {/* Bottom Quick Controls */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Streak: <strong className="text-white">{state.streak} days</strong></span>
+        {/* Level card */}
+        <div className="p-3">
+          <div className="card p-4" data-accent="fuchsia">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg leading-none" aria-hidden>
+                  {stats.rank.emoji}
+                </span>
+                <div className="leading-tight">
+                  <div className="font-display text-[13px] font-bold text-white">{stats.rank.name}</div>
+                  <div className="text-[10px] font-semibold text-[var(--dim)]">Level {stats.level}</div>
+                </div>
+              </div>
+              <Tappable
+                onClick={toggleVoice}
+                title={state.voiceEnabled ? 'Mute question read-aloud' : 'Enable question read-aloud'}
+                className="rounded-lg p-2 text-[var(--dim)] transition-colors hover:bg-white/[0.06] hover:text-white"
+              >
+                {state.voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </Tappable>
             </div>
-            <button
-              onClick={toggleVoice}
-              title={state.voiceEnabled ? "Disable Speech Output" : "Enable Speech Output"}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            >
-              {state.voiceEnabled ? <Volume2 className="w-4 h-4 text-indigo-400" /> : <VolumeX className="w-4 h-4 text-slate-600" />}
-            </button>
+
+            <div className="mt-3">
+              <Progress value={stats.levelProgress} />
+              <div className="mt-1.5 flex justify-between text-[10px] font-semibold text-[var(--dim)]">
+                <span className="tabular">{stats.xp.toLocaleString()} XP</span>
+                <span className="tabular">
+                  {stats.nextRank ? `${stats.nextRank.xp.toLocaleString()} XP` : 'MAXED'}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center gap-1.5 border-t border-white/[0.07] pt-3 text-xs">
+              <Flame className="h-4 w-4 text-orange-400" />
+              <span className="text-[var(--muted)]">
+                <strong className="text-white tabular">{stats.streak}</strong> day{stats.streak === 1 ? '' : 's'} in a row
+              </span>
+            </div>
           </div>
         </div>
       </aside>
 
-      {/* Main Container */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        
-        {/* Mobile Top Header */}
-        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 select-none shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-md">
-              <span className="font-mono font-bold text-sm text-white">J</span>
-            </div>
-            <div>
-              <h1 className="font-bold text-sm tracking-tight text-white leading-none">JavaMaster Pro</h1>
-              <span className="text-[10px] text-indigo-400 font-medium">Senior • 5+ YOE</span>
-            </div>
-          </div>
+      {/* ---------------- Main ---------------- */}
+      <div className="relative z-10 flex h-full flex-1 flex-col overflow-hidden">
+        {/* Mobile header */}
+        <header className="pt-safe flex shrink-0 items-center justify-between border-b border-white/[0.07] bg-black/30 px-4 py-3 backdrop-blur-xl select-none md:hidden">
+          <Wordmark compact />
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-full text-xs text-slate-300 border border-slate-700/50">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              <span className="font-bold">{state.streak}</span>
-            </div>
-            <button
-              onClick={toggleVoice}
-              className="p-1.5 rounded-md text-slate-400 hover:text-white transition-colors"
+            <div
+              className="flex items-center gap-1.5 rounded-full border border-white/[0.09] bg-white/[0.05] px-2.5 py-1"
+              title={`Level ${stats.level} — ${stats.rank.name}`}
             >
-              {state.voiceEnabled ? <Volume2 className="w-4 h-4 text-indigo-400" /> : <VolumeX className="w-4 h-4 text-slate-600" />}
-            </button>
+              <span className="text-xs leading-none" aria-hidden>
+                {stats.rank.emoji}
+              </span>
+              <span className="text-[11px] font-bold text-white tabular">Lv{stats.level}</span>
+            </div>
+
+            <div className="flex items-center gap-1 rounded-full border border-orange-500/25 bg-orange-500/10 px-2.5 py-1">
+              <Flame className="h-3.5 w-3.5 text-orange-400" />
+              <span className="text-[11px] font-bold text-orange-300 tabular">{stats.streak}</span>
+            </div>
           </div>
         </header>
 
-        {/* Page Content View */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-950">
-          {children}
-        </main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">{children}</main>
 
-        {/* Mobile Bottom Navigation Bar */}
-        <nav className="md:hidden flex items-center justify-around bg-slate-900 border-t border-slate-800 select-none shrink-0 pb-safe">
-          {navItems.map((item) => {
+        {/* Mobile bottom nav */}
+        <nav className="pb-safe flex shrink-0 items-stretch border-t border-white/[0.07] bg-black/45 backdrop-blur-xl select-none md:hidden">
+          {NAV.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
-              <button
+              <Tappable
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex-1 flex flex-col items-center justify-center py-2 relative text-center ${
-                  isActive ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-300'
+                className={`relative flex flex-1 flex-col items-center justify-center gap-1 py-2.5 ${
+                  isActive ? 'text-white' : 'text-[var(--dim)]'
                 }`}
               >
                 {isActive && (
-                  <span className="absolute top-0 w-8 h-0.5 bg-indigo-500 rounded-full" />
+                  <motion.span
+                    layoutId="tabActive"
+                    className="bg-brand absolute top-0 h-[3px] w-9 rounded-full"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
                 )}
-                <Icon className="w-5 h-5 mb-1" />
-                <span className="text-[10px] font-medium tracking-tight leading-none">
-                  {item.label === 'Spot Defect' ? 'Defects' : item.label === 'Compliance' ? 'Info' : item.label}
-                </span>
-              </button>
+                <Icon className="h-[19px] w-[19px]" />
+                <span className="text-[9.5px] leading-none font-bold tracking-wide">{item.short}</span>
+              </Tappable>
             );
           })}
         </nav>
-
       </div>
-
     </div>
   );
 };

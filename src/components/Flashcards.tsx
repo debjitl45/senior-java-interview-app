@@ -1,259 +1,238 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion'; 
-import { RotateCw, ChevronLeft, ChevronRight } from 'lucide-react';
-import { QUESTIONS, CATEGORIES } from '../data/questions';
+import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { RotateCw, Shuffle, Undo2 } from 'lucide-react';
+import { useApp, type FlashcardRating } from '../context/AppContext';
+import {
+  CATEGORIES,
+  QUESTIONS,
+  getCategoryById,
+  type Question,
+} from '../data/questions';
+import { Chip, CodeBlock, DifficultyTag, EmptyState, Markdown, Progress, Tappable, celebrate } from './ui';
+
+const RATINGS: { key: FlashcardRating; label: string; emoji: string; color: string }[] = [
+  { key: 'Again', label: 'Again', emoji: '\u{1F635}', color: '#fb7185' },
+  { key: 'Hard', label: 'Hard', emoji: '\u{1F613}', color: '#fbbf24' },
+  { key: 'Good', label: 'Good', emoji: '\u{1F642}', color: '#38bdf8' },
+  { key: 'Easy', label: 'Easy', emoji: '\u{1F60E}', color: '#34d399' },
+];
+
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
 
 export const Flashcards: React.FC = () => {
-  
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [isFlipped, setIsFlipped] = useState<boolean>(false);
+  const { state, rateFlashcard } = useApp();
 
-  const [startX, setStartX] = useState<number | null>(null);
-  const [wasSwipe, setWasSwipe] = useState(false);
+  const [category, setCategory] = useState<string | null>(null);
+  const [index, setIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [seed, setSeed] = useState(0);
+  const [direction, setDirection] = useState(1);
 
-  // Filter pool
-  const pool = selectedCategory 
-    ? QUESTIONS.filter(q => q.categoryId === selectedCategory)
-    : QUESTIONS;
+  const pool = useMemo<Question[]>(() => {
+    const base = category ? QUESTIONS.filter((q) => q.categoryId === category) : QUESTIONS;
+    return seed === 0 ? base : shuffle(base);
+  }, [category, seed]);
 
-  const currentQ = pool[currentIndex];
+  const card = pool[index];
+  const cat = card ? getCategoryById(card.categoryId) : undefined;
+  const rated = card ? state.flashcardRatings[card.id] : undefined;
 
-  const handleFlip = () => {
-    if (wasSwipe) {
-      setWasSwipe(false);
-      return;
-    }
-  
-    setIsFlipped(!isFlipped);
+  const go = (delta: number) => {
+    if (!pool.length) return;
+    setDirection(delta);
+    setFlipped(false);
+    setIndex((i) => (i + delta + pool.length) % pool.length);
   };
 
-  const nextCard = () => {
-    setIsFlipped(false);
-  
-    if (currentIndex + 1 < pool.length) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      setCurrentIndex(0);
-    }
-  };
-  
-  const previousCard = () => {
-    setIsFlipped(false);
-  
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    } else {
-      setCurrentIndex(pool.length - 1);
-    }
+  const rate = (r: FlashcardRating) => {
+    if (!card) return;
+    rateFlashcard(card.id, r);
+    if (r === 'Easy') celebrate('small');
+    go(1);
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    setStartX(e.clientX);
-  };
-  
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (startX === null) return;
-  
-    const delta = e.clientX - startX;
-  
-    if (Math.abs(delta) > 70) {
-      setWasSwipe(true);
-  
-      if (delta < 0) {
-        nextCard();
-      } else {
-        previousCard();
-      }
-    }
-  
-    setStartX(null);
-  };
-
-  // Safe layout render
-  const renderFormattedText = (text: string) => {
-    return text.split('\n\n').map((paragraph, idx) => {
-      if (paragraph.startsWith('###')) {
-        return (
-          <h5 key={idx} className="font-bold text-indigo-300 text-xs mt-3 mb-1">
-            {paragraph.replace('###', '').trim()}
-          </h5>
-        );
-      }
-      return (
-        <p key={idx} className="text-xs text-slate-300 leading-relaxed my-1">
-          {paragraph}
-        </p>
-      );
-    });
+  const reset = (catId: string | null) => {
+    setCategory(catId);
+    setIndex(0);
+    setFlipped(false);
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 fade-in max-w-3xl mx-auto">
-      
+    <div className="fade-in mx-auto max-w-3xl space-y-5 p-4 pb-10 md:p-7" data-accent={cat?.accent ?? 'cyan'}>
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold">
-            Spaced Repetition
-          </span>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-            Active Recall Flashcards
-          </h2>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-display text-2xl font-bold text-white md:text-3xl">Recall drill</h2>
+          <p className="mt-1 text-xs text-[var(--muted)] md:text-sm">
+            Answer out loud before you flip. Being honest with the rating is the whole point.
+          </p>
         </div>
-        <p className="text-xs md:text-sm text-slate-400 mt-1">
-          Test your memory directly. Rate your confidence on each answer to feed our dynamic Readiness Algorithm.
-        </p>
+        <Tappable
+          onClick={() => {
+            setSeed((s) => s + 1);
+            setIndex(0);
+            setFlipped(false);
+          }}
+          className="flex items-center gap-1.5 rounded-xl border border-white/[0.09] bg-white/[0.04] px-3 py-2 text-[11px] font-bold text-[var(--muted)] hover:text-white"
+        >
+          <Shuffle className="h-3.5 w-3.5" /> Shuffle
+        </Tappable>
       </div>
 
-      {/* Category Picker */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 pt-1 no-scrollbar text-xs">
-        <button
-          onClick={() => {
-            setSelectedCategory(null);
-            setCurrentIndex(0);
-            setIsFlipped(false);
-          }}
-          className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all ${
-            selectedCategory === null
-              ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
-              : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
-          }`}
-        >
-          All Domains
-        </button>
-        
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => {
-              setSelectedCategory(cat.id);
-              setCurrentIndex(0);
-              setIsFlipped(false);
-            }}
-            className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all ${
-              selectedCategory === cat.id
-                ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
-                : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
-            }`}
-          >
-            {cat.name.split(' ')[0]}
-          </button>
+      {/* Category picker */}
+      <div className="no-scrollbar edge-fade -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+        <Chip active={!category} onClick={() => reset(null)}>
+          All domains
+        </Chip>
+        {CATEGORIES.map((c) => (
+          <span key={c.id} data-accent={c.accent}>
+            <Chip active={category === c.id} onClick={() => reset(c.id)} title={c.name}>
+              <span aria-hidden>{c.emoji}</span> {c.shortName}
+            </Chip>
+          </span>
         ))}
       </div>
 
-      {/* Flashcard Card Area */}
-      {currentQ ? (
+      {!card ? (
+        <EmptyState emoji={'\u{1F0CF}'} title="No cards here" body="Pick another domain to start drilling." />
+      ) : (
         <div className="space-y-4">
-          
-          {/* Progress status */}
-          <div className="flex items-center justify-between text-xs text-slate-500 px-1">
-            <span>Card {currentIndex + 1} of {pool.length}</span>
-            <span className="font-semibold text-indigo-400">{currentQ.difficulty}</span>
-          </div>
-
-          {/* The Flip Card */}
-          <motion.div
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.3}
-                whileDrag={{
-                  scale: 1.02,
-                  rotate: 3
-                }}
-                onDragEnd={(_, info) => {
-                  const threshold = 100;
-
-                  if (info.offset.x < -threshold) {
-                    nextCard();
-                  } else if (info.offset.x > threshold) {
-                    previousCard();
-                  }
-                }}
-                onClick={handleFlip}
-                className={`min-h-[320px] bg-slate-900 hover:bg-slate-900/90 rounded-2xl border border-slate-800 p-6 md:p-8 flex flex-col justify-between cursor-pointer transition-all select-none relative group shadow-xl ${
-                  isFlipped ? 'border-indigo-500/30 bg-slate-950/80' : ''
-                }`}
-              >
-
-            {/* Top Tag */}
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-slate-950 px-2.5 py-1 rounded-md border border-slate-800">
-                {CATEGORIES.find(c => c.id === currentQ.categoryId)?.name || 'Java'}
+          {/* Progress */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span className="text-[var(--muted)] tabular">
+                Card {index + 1} of {pool.length}
               </span>
-
-              <div className="flex items-center gap-1 text-[11px] text-slate-500 group-hover:text-indigo-400 transition-colors">
-                <RotateCw className="w-3.5 h-3.5" />
-                <span>Tap to {isFlipped ? 'see Question' : 'Flip'}</span>
-              </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="my-6">
-              {!isFlipped ? (
-                <div className="space-y-4 text-center">
-                  <span className="text-xs font-semibold text-indigo-400 block">Question Prompt</span>
-                  <h3 className="text-base md:text-xl font-bold text-white leading-relaxed">
-                    {currentQ.question}
-                  </h3>
-                  {currentQ.scenario && (
-                    <p className="text-xs text-slate-400 max-w-lg mx-auto bg-slate-950 p-2.5 rounded-lg border border-slate-800/60">
-                      <strong>Scenario: </strong>{currentQ.scenario}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3 text-left fade-in">
-                  <span className="text-xs font-semibold text-indigo-400 block">Ideal Senior Answer</span>
-                  <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2">
-                    {renderFormattedText(currentQ.idealAnswer)}
-                  </div>
-                  
-                  {currentQ.codeSnippet && (
-                    <pre className="bg-slate-900 p-2.5 rounded-lg text-xs text-slate-300 font-mono overflow-x-auto border border-slate-800">
-                      <code>{currentQ.codeSnippet}</code>
-                    </pre>
-                  )}
-                </div>
+              {rated && (
+                <span className="text-[var(--dim)]">
+                  last rated <strong className="text-white">{rated}</strong>
+                </span>
               )}
             </div>
+            <Progress value={(index + 1) / pool.length} height={5} />
+          </div>
 
-            {/* Bottom Tip */}
-            <div className="text-center text-[11px] text-slate-600">
-              {!isFlipped ? 'Think through your answer before flipping' : 'Rate your retention below'}
-            </div>
-          </motion.div>
-              
-          {/* Rating Controls */}
-
-          <div className="flex gap-3">
-              <button
-                onClick={previousCard}
-                className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
+          {/* Card */}
+          <div className="relative min-h-[380px]">
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={`${card.id}-${flipped}`}
+                custom={direction}
+                initial={{ opacity: 0, x: direction * 48, rotateY: flipped ? -12 : 12 }}
+                animate={{ opacity: 1, x: 0, rotateY: 0 }}
+                exit={{ opacity: 0, x: -direction * 48 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.22}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -90) go(1);
+                  else if (info.offset.x > 90) go(-1);
+                }}
+                onClick={() => setFlipped((f) => !f)}
+                className={`card min-h-[380px] cursor-pointer p-5 select-none md:p-7 ${
+                  flipped ? 'card-accent glow' : ''
+                }`}
               >
-                <ChevronLeft size={18} />
-                Previous
-              </button>
+                <div className="flex items-center justify-between">
+                  <span className="rounded-full border border-[var(--a-line)] bg-[var(--a-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--a)]">
+                    <span aria-hidden>{cat?.emoji}</span> {cat?.shortName}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <DifficultyTag difficulty={card.difficulty} />
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-[var(--dim)]">
+                      <RotateCw className="h-3 w-3" /> tap
+                    </span>
+                  </div>
+                </div>
 
-              <button
-                onClick={nextCard}
-                className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
+                {!flipped ? (
+                  <div className="flex min-h-[280px] flex-col justify-center gap-4 py-6 text-center">
+                    <span className="eyebrow">The question</span>
+                    <h3 className="font-display text-lg leading-snug font-bold text-white md:text-2xl">
+                      {card.question}
+                    </h3>
+                    <p className="mx-auto max-w-lg rounded-xl border border-white/[0.07] bg-black/25 p-3 text-[11.5px] leading-relaxed text-[var(--muted)]">
+                      <strong className="text-white">Context: </strong>
+                      {card.scenario}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="py-4">
+                    <span className="eyebrow">Model answer</span>
+                    <div className="scroll-fade mt-2 max-h-[46vh] min-h-[220px] overflow-y-auto pr-1">
+                      <Markdown text={card.idealAnswer} />
+                      {card.codeSnippet && (
+                        <div className="mt-3">
+                          <CodeBlock code={card.codeSnippet} label="java" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 border-t border-white/[0.07] pt-3 text-center text-[10.5px] font-semibold text-[var(--dim)]">
+                  {flipped ? 'How well did you actually know that?' : 'Swipe to skip · tap to flip'}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Rating */}
+          <AnimatePresence>
+            {flipped && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="grid grid-cols-4 gap-2"
               >
-                Next
-                <ChevronRight size={18} />
-              </button>
-            </div>
+                {RATINGS.map((r) => (
+                  <Tappable
+                    key={r.key}
+                    onClick={() => rate(r.key)}
+                    className="flex flex-col items-center gap-1 rounded-2xl border py-3 text-[11px] font-bold"
+                    style={{
+                      color: r.color,
+                      background: `${r.color}14`,
+                      borderColor: `${r.color}3d`,
+                    }}
+                  >
+                    <span className="text-lg leading-none" aria-hidden>
+                      {r.emoji}
+                    </span>
+                    {r.label}
+                  </Tappable>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            <div className="text-center text-xs text-slate-500">
-              Swipe left for next card • Swipe right for previous card
+          {!flipped && (
+            <div className="grid grid-cols-2 gap-2">
+              <Tappable
+                onClick={() => go(-1)}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-white/[0.09] bg-white/[0.04] py-3 text-xs font-bold text-[var(--muted)] hover:text-white"
+              >
+                <Undo2 className="h-4 w-4" /> Previous
+              </Tappable>
+              <Tappable
+                onClick={() => setFlipped(true)}
+                className="bg-brand rounded-2xl py-3 text-xs font-bold text-white"
+              >
+                Reveal answer
+              </Tappable>
             </div>
-        </div>
-      ) : (
-        <div className="text-center py-12 text-slate-500">
-          No questions in this pool.
+          )}
         </div>
       )}
-
     </div>
   );
 };

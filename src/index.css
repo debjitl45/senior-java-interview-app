@@ -1,78 +1,275 @@
 @import "tailwindcss";
 
+/* ============================================================
+   JAVAMASTER — design system
+   Dark-only, high-contrast, per-domain accent colours.
+   Every accent is a CSS variable so components can stay generic:
+   set data-accent="cyan" on a wrapper, then use var(--a) inside.
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --bg: #08070f;
+  --bg-2: #0b0a16;
+  --elev: #12101f;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.075);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.16);
+
+  /* Text */
+  --text: #f3f2f8;
+  --muted: #a8a4bd;
+  --dim: #706c8a;
+
+  /* Brand gradient */
+  --brand-1: #8b5cf6;
+  --brand-2: #e879f9;
+  --brand-3: #22d3ee;
+
+  /* Default accent (violet) */
+  --a: #a78bfa;
+  --a-2: #c4b5fd;
+  --a-soft: rgba(167, 139, 250, 0.13);
+  --a-line: rgba(167, 139, 250, 0.34);
+  --a-glow: rgba(167, 139, 250, 0.28);
+
+  /* Semantic */
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #fb7185;
+
+  --r-lg: 1.25rem;
+  --r-xl: 1.5rem;
+}
+
+[data-accent="violet"]  { --a:#a78bfa; --a-2:#c4b5fd; --a-soft:rgba(167,139,250,.13); --a-line:rgba(167,139,250,.34); --a-glow:rgba(167,139,250,.28); }
+[data-accent="amber"]   { --a:#fbbf24; --a-2:#fcd34d; --a-soft:rgba(251,191,36,.13);  --a-line:rgba(251,191,36,.34);  --a-glow:rgba(251,191,36,.26); }
+[data-accent="cyan"]    { --a:#22d3ee; --a-2:#67e8f9; --a-soft:rgba(34,211,238,.13);  --a-line:rgba(34,211,238,.34);  --a-glow:rgba(34,211,238,.26); }
+[data-accent="emerald"] { --a:#34d399; --a-2:#6ee7b7; --a-soft:rgba(52,211,153,.13);  --a-line:rgba(52,211,153,.34);  --a-glow:rgba(52,211,153,.26); }
+[data-accent="fuchsia"] { --a:#e879f9; --a-2:#f0abfc; --a-soft:rgba(232,121,249,.13); --a-line:rgba(232,121,249,.34); --a-glow:rgba(232,121,249,.26); }
+[data-accent="lime"]    { --a:#a3e635; --a-2:#bef264; --a-soft:rgba(163,230,53,.13);  --a-line:rgba(163,230,53,.34);  --a-glow:rgba(163,230,53,.26); }
+[data-accent="sky"]     { --a:#38bdf8; --a-2:#7dd3fc; --a-soft:rgba(56,189,248,.13);  --a-line:rgba(56,189,248,.34);  --a-glow:rgba(56,189,248,.26); }
+[data-accent="indigo"]  { --a:#818cf8; --a-2:#a5b4fc; --a-soft:rgba(129,140,248,.13); --a-line:rgba(129,140,248,.34); --a-glow:rgba(129,140,248,.28); }
+[data-accent="rose"]    { --a:#fb7185; --a-2:#fda4af; --a-soft:rgba(251,113,133,.13); --a-line:rgba(251,113,133,.34); --a-glow:rgba(251,113,133,.26); }
+[data-accent="orange"]  { --a:#fb923c; --a-2:#fdba74; --a-soft:rgba(251,146,60,.13);  --a-line:rgba(251,146,60,.34);  --a-glow:rgba(251,146,60,.26); }
+[data-accent="teal"]    { --a:#2dd4bf; --a-2:#5eead4; --a-soft:rgba(45,212,191,.13);  --a-line:rgba(45,212,191,.34);  --a-glow:rgba(45,212,191,.26); }
+
 @layer base {
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+  }
+
   body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
   }
-  
-  code, pre {
-    font-family: 'JetBrains Mono', monospace;
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.025em;
   }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-feature-settings: "liga" 0;
+  }
+
+  ::selection {
+    background: var(--brand-2);
+    color: #10061a;
+  }
+
+  button { -webkit-tap-highlight-color: transparent; }
 }
 
-/* Custom smooth scrollbar for premium app aesthetic */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+/* ---------- ambient background ---------- */
+
+.aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(60rem 40rem at 12% -10%, rgba(139, 92, 246, 0.20), transparent 60%),
+    radial-gradient(50rem 34rem at 92% 4%,  rgba(232, 121, 249, 0.14), transparent 62%),
+    radial-gradient(46rem 40rem at 50% 108%, rgba(34, 211, 238, 0.12), transparent 60%);
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
 }
 
+/* ---------- surfaces ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.card-hover {
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+.card-hover:hover {
+  background: var(--surface-2);
+  border-color: var(--a-line);
+}
+
+.card-accent {
+  background:
+    linear-gradient(180deg, var(--a-soft), transparent 55%),
+    var(--surface);
+  border: 1px solid var(--a-line);
+}
+
+.glow {
+  box-shadow: 0 0 0 1px var(--a-line), 0 18px 50px -22px var(--a-glow);
+}
+
+/* Gradient hairline border without extra markup */
+.ring-brand {
+  position: relative;
+}
+.ring-brand::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2) 45%, var(--brand-3));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.text-brand {
+  background: linear-gradient(100deg, var(--brand-1), var(--brand-2) 48%, var(--brand-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-brand {
+  background: linear-gradient(120deg, var(--brand-1), var(--brand-2) 52%, var(--brand-3));
+}
+
+/* ---------- typography helpers ---------- */
+
+.eyebrow {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------- code ---------- */
+
+.code-block {
+  background: #06050c;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  overflow-x: auto;
+  font-size: 0.72rem;
+  line-height: 1.65;
+  tab-size: 2;
+}
+@media (min-width: 768px) {
+  .code-block { font-size: 0.8rem; }
+}
+
+/* ---------- scrollbars ---------- */
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.5);
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Fade the bottom of a scrollable panel so clipped text reads as scrollable */
+.scroll-fade {
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 86%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0, #000 86%, transparent 100%);
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* Fade the right edge of horizontal chip rows */
+.edge-fade {
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
 }
 
-/* Page transitions */
-.fade-in {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* ---------- motion ---------- */
+
+.fade-in { animation: fadeUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
+.pop-in { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2.4s linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.float { animation: float 5s ease-in-out infinite; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+.pulse-ring { animation: pulseRing 2.4s ease-out infinite; }
+
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 var(--a-glow); }
+  70%  { box-shadow: 0 0 0 14px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
-/* Glassmorphic backdrop utilities */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
+/* ---------- native shell safe areas ---------- */
 
-.glass-panel-indigo {
-  background: rgba(30, 27, 75, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-}
-
-/* Safe areas for native iOS/Android PWA wrapping */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-.pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
-}
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }

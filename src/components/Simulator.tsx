@@ -1,580 +1,535 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  PlaySquare, 
-  Clock, 
-  Award, 
-  RotateCcw, 
-  Edit3, 
-  Sparkles,
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
   ArrowRight,
-  ChevronRight
+  Check,
+  Clock,
+  History,
+  Mic,
+  Play,
+  RotateCcw,
+  Timer,
+  Volume2,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { useApp } from '../context/AppContext';
-import { QUESTIONS, Question } from '../data/questions';
+import { QUESTIONS, getCategoryById, type Question } from '../data/questions';
+import {
+  Badge,
+  CodeBlock,
+  DifficultyTag,
+  Markdown,
+  Progress,
+  Ring,
+  SectionHeader,
+  Tappable,
+  celebrate,
+} from './ui';
+
+type Screen = 'setup' | 'active' | 'review' | 'scorecard';
+
+interface Preset {
+  id: string;
+  name: string;
+  emoji: string;
+  desc: string;
+  count: number;
+  categories: string[];
+  accent: string;
+}
+
+const PRESETS: Preset[] = [
+  {
+    id: 'warmup',
+    name: 'Quick warm-up',
+    emoji: '⚡',
+    desc: 'Four fundamentals to shake the rust off before a real call.',
+    count: 4,
+    categories: ['collections', 'streams', 'modern'],
+    accent: 'cyan',
+  },
+  {
+    id: 'jvm-deep',
+    name: 'JVM deep dive',
+    emoji: '\u{1F9E0}',
+    desc: 'Memory model, GC, JIT and the profiling questions that follow them.',
+    count: 8,
+    categories: ['jvm', 'concurrency', 'profiling'],
+    accent: 'violet',
+  },
+  {
+    id: 'spring-round',
+    name: 'Spring & data round',
+    emoji: '\u{1F343}',
+    desc: 'Proxies, transactions, JPA and the persistence traps behind them.',
+    count: 7,
+    categories: ['spring', 'persistence'],
+    accent: 'emerald',
+  },
+  {
+    id: 'design',
+    name: 'System design',
+    emoji: '\u{1F5FA}️',
+    desc: 'Distributed systems, consistency, resilience and scale.',
+    count: 6,
+    categories: ['architecture'],
+    accent: 'indigo',
+  },
+  {
+    id: 'full-loop',
+    name: 'The full loop',
+    emoji: '\u{1F3AF}',
+    desc: 'Ten questions drawn from every domain. Breadth and depth, no mercy.',
+    count: 10,
+    categories: [],
+    accent: 'fuchsia',
+  },
+];
+
+const RUBRIC = [
+  'I covered the core mechanism, not just the name of it',
+  'I named the trade-offs and failure modes',
+  'I gave a concrete example, number or code shape',
+];
+
+const TIME_OPTIONS = [180, 300, 480];
+
+const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 export const Simulator: React.FC = () => {
-  const { state, saveInterview } = useApp();
+  const { state, stats, saveInterview } = useApp();
 
-  // Screen states: 'setup' | 'active' | 'evaluation' | 'scorecard'
-  const [screen, setScreen] = useState<'setup' | 'active' | 'evaluation' | 'scorecard'>('setup');
-  
-  // Setup configuration
-  const [selectedPreset, setSelectedPreset] = useState<string>('staff_deep');
-  const [timePerQuestion, setTimePerQuestion] = useState<number>(300); // seconds
+  const [screen, setScreen] = useState<Screen>('setup');
+  const [presetId, setPresetId] = useState(PRESETS[0].id);
+  const [perQuestion, setPerQuestion] = useState(300);
 
-  // Interview state
-  const [interviewQuestions, setInterviewQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [timeLeft, setTimeLeft] = useState<number>(300);
-  const [scratchpad, setScratchpad] = useState<string>('');
-  
-  // Per-question scores: out of 3 rubrics checked
-  const [questionScores, setQuestionScores] = useState<number[]>([]);
-  
-  // Current rubric selection
-  const [rubricsChecked, setRubricsChecked] = useState<boolean[]>([false, false, false]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [index, setIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(300);
+  const [notes, setNotes] = useState('');
+  const [scores, setScores] = useState<number[]>([]);
+  const [checks, setChecks] = useState([false, false, false]);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const preset = useMemo(() => PRESETS.find((p) => p.id === presetId) ?? PRESETS[0], [presetId]);
+  const current = questions[index];
 
-  const presets = [
-    {
-      id: 'staff_deep',
-      name: 'Staff Deep Dive: JVM & Concurrency',
-      desc: 'Intense technical focus on low-latency memory models, CPU caches, and virtual thread internals.',
-      count: 8,
-      categoryFilter: ['jvm', 'concurrency']
-    },
-    {
-      id: 'system_design',
-      name: 'Distributed Systems & Architecture',
-      desc: 'High-throughput patterns, Sagas, dual-writes, outbox tailing, and distributed idempotency.',
-      count: 6,
-      categoryFilter: ['architecture']
-    },
-    {
-      id: 'faang_mix',
-      name: 'Complete FAANG Architecture Mix',
-      desc: 'A full randomized interview slate spanning all categories to test breadth and depth.',
-      count: 10,
-      categoryFilter: []
-    },
-    {
-      id: 'quick_warmup',
-      name: 'Quick-Fire Warmup',
-      desc: 'A fast 4-question sprint for daily practice.',
-      count: 4,
-      categoryFilter: []
-    }
-  ];
-
-  // Start interview
-  const startInterview = () => {
-    const preset = presets.find(p => p.id === selectedPreset) || presets[0];
-    
-    // Filter and shuffle
-    let pool = [...QUESTIONS];
-    if (preset.categoryFilter.length > 0) {
-      pool = pool.filter(q => preset.categoryFilter.includes(q.categoryId));
-    }
-    
-    // Simple deterministic or randomized selection
-    // Let's randomize cleanly
-    const shuffled = pool.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, preset.count);
-
-    setInterviewQuestions(selected);
-    setCurrentIndex(0);
-    setTimeLeft(timePerQuestion);
-    setScratchpad('');
-    setQuestionScores(new Array(selected.length).fill(0));
-    setRubricsChecked([false, false, false]);
-    setScreen('active');
-
-    // Announce first question if voice enabled
-    if (state.voiceEnabled && selected.length > 0) {
-      speakQuestion(selected[0].question);
-    }
-  };
-
-  const speakQuestion = (text: string) => {
-    if ('speechSynthesis' in window) {
+  const speak = useCallback(
+    (text: string) => {
+      if (!state.voiceEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1;
+      window.speechSynthesis.speak(u);
+    },
+    [state.voiceEnabled],
+  );
+
+  const stopTimer = () => {
+    if (timer.current) clearInterval(timer.current);
+    timer.current = null;
   };
 
-  // Timer logic
   useEffect(() => {
-    if (screen === 'active') {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            // Auto transition to evaluation
-            clearInterval(timerRef.current!);
-            setScreen('evaluation');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+    if (screen !== 'active') {
+      stopTimer();
+      return;
     }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [screen]);
-
-  // Handle evaluation transition
-  const handleEvaluate = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setScreen('evaluation');
-  };
-
-  // Submit current question evaluation
-  const submitEvaluation = () => {
-    // Score based on how many rubrics checked
-    const points = rubricsChecked.filter(Boolean).length;
-    
-    setQuestionScores(prev => {
-      const updated = [...prev];
-      updated[currentIndex] = points;
-      return updated;
-    });
-
-    // Move to next or finish
-    if (currentIndex + 1 < interviewQuestions.length) {
-      setCurrentIndex(prev => prev + 1);
-      setTimeLeft(timePerQuestion);
-      setScratchpad('');
-      setRubricsChecked([false, false, false]);
-      setScreen('active');
-      
-      // Speak next
-      if (state.voiceEnabled) {
-        speakQuestion(interviewQuestions[currentIndex + 1].question);
-      }
-    } else {
-      // Finish interview
-      finishInterview();
-    }
-  };
-
-  const finishInterview = () => {
-    setScreen('scorecard');
-    
-    // Trigger celebration
-    try {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
+    timer.current = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          stopTimer();
+          setScreen('review');
+          return 0;
+        }
+        return t - 1;
       });
-    } catch (e) {
-      // safe fallback
-    }
+    }, 1000);
+    return stopTimer;
+  }, [screen, index]);
 
-    // Save state
-    // Total max points = questions * 3
-    // Calculate percentage
-    // Calculate final score using latest questionScores if possible
-    // Let's use a delayed save to ensure questionScores state is stable or calculate directly
+  useEffect(() => () => stopTimer(), []);
+
+  const start = () => {
+    const pool = preset.categories.length
+      ? QUESTIONS.filter((q) => preset.categories.includes(q.categoryId))
+      : [...QUESTIONS];
+
+    const picked = [...pool].sort(() => Math.random() - 0.5).slice(0, preset.count);
+
+    setQuestions(picked);
+    setIndex(0);
+    setTimeLeft(perQuestion);
+    setNotes('');
+    setScores([]);
+    setChecks([false, false, false]);
+    setScreen('active');
+    if (picked[0]) speak(picked[0].question);
   };
 
-  // Calculate percentage dynamically
-  const totalPointsEarned = questionScores.reduce((a, b) => a + b, 0);
-  const maxPossiblePoints = interviewQuestions.length * 3;
-  const finalPercentage = maxPossiblePoints > 0 ? Math.round((totalPointsEarned / maxPossiblePoints) * 100) : 0;
-
-  // Save the interview exactly once when scorecard mounts
-  useEffect(() => {
-    if (screen === 'scorecard' && interviewQuestions.length > 0) {
-      const presetObj = presets.find(p => p.id === selectedPreset);
-      saveInterview({
-        score: finalPercentage,
-        preset: presetObj?.name || 'Custom Simulator',
-        totalQuestions: interviewQuestions.length
-      });
-    }
-  }, [screen]);
-
-  const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  const submitAnswer = () => {
+    stopTimer();
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    setScreen('review');
   };
 
-  const currentQ = interviewQuestions[currentIndex];
+  const nextQuestion = () => {
+    const earned = checks.filter(Boolean).length;
+    const updated = [...scores, earned];
+    setScores(updated);
+    setChecks([false, false, false]);
+    setNotes('');
 
-  return (
-    <div className="p-4 md:p-6 space-y-6 fade-in max-w-4xl mx-auto">
-      
-      {/* 1. SETUP SCREEN */}
-      {screen === 'setup' && (
-        <div className="space-y-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold">
-                Simulator
-              </span>
-              <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-                Mock Interview Studio
-              </h2>
-            </div>
-            <p className="text-xs md:text-sm text-slate-400 mt-1">
-              Test your ability to deliver structured, high-signal answers under real time constraints.
-            </p>
-          </div>
+    if (index + 1 >= questions.length) {
+      const total = updated.reduce((a, b) => a + b, 0);
+      const pct = Math.round((total / (questions.length * 3)) * 100);
+      saveInterview({ score: pct, preset: preset.name, totalQuestions: questions.length });
+      if (pct >= 70) celebrate('big');
+      setScreen('scorecard');
+      return;
+    }
 
-          {/* Preset Selector */}
-          <div>
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-              Select Interview Blueprint
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {presets.map((preset) => {
-                const isSelected = selectedPreset === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    onClick={() => setSelectedPreset(preset.id)}
-                    className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between space-y-2 ${
-                      isSelected
-                        ? 'bg-indigo-600/15 border-indigo-500 text-white shadow-sm'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-300'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">
-                          {preset.name}
-                        </span>
-                        <span className="text-[10px] font-semibold bg-slate-800 text-slate-400 px-2 py-0.5 rounded">
-                          {preset.count} Questions
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                        {preset.desc}
-                      </p>
-                    </div>
+    const nextIdx = index + 1;
+    setIndex(nextIdx);
+    setTimeLeft(perQuestion);
+    setScreen('active');
+    speak(questions[nextIdx].question);
+  };
 
-                    <div className="flex items-center gap-1 text-[11px] text-indigo-400 font-semibold pt-1">
-                      <span>{isSelected ? 'Blueprint Selected' : 'Select Blueprint'}</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+  const finalPct = scores.length
+    ? Math.round((scores.reduce((a, b) => a + b, 0) / (scores.length * 3)) * 100)
+    : 0;
 
-          {/* Timing & Voice Controls */}
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Simulation Parameters
-            </h3>
+  /* ------------------------------------------------------------ setup */
+  if (screen === 'setup') {
+    return (
+      <div className="fade-in mx-auto max-w-4xl space-y-6 p-4 pb-10 md:p-7">
+        <div>
+          <h2 className="font-display flex items-center gap-2 text-2xl font-bold text-white md:text-3xl">
+            <Mic className="h-6 w-6 text-fuchsia-400" /> Mock interview
+          </h2>
+          <p className="mt-1 max-w-xl text-xs text-[var(--muted)] md:text-sm">
+            One question at a time, on a clock, with a scratchpad. Answer out loud like it is the real
+            thing, then score yourself honestly against the rubric.
+          </p>
+        </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-slate-300 font-medium mb-1.5">
-                  Time Allocation per Question
-                </label>
-                <select
-                  value={timePerQuestion}
-                  onChange={(e) => setTimePerQuestion(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+        <section>
+          <SectionHeader title="Pick your round" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {PRESETS.map((p) => {
+              const active = p.id === presetId;
+              return (
+                <Tappable
+                  key={p.id}
+                  data-accent={p.accent}
+                  onClick={() => setPresetId(p.id)}
+                  className={`card p-4 text-left transition-colors ${
+                    active ? 'card-accent glow' : 'card-hover'
+                  }`}
                 >
-                  <option value={180}>3 Minutes (Fast paced)</option>
-                  <option value={300}>5 Minutes (Standard FAANG)</option>
-                  <option value={450}>7.5 Minutes (In-depth architecture)</option>
-                  <option value={600}>10 Minutes (Exhaustive design)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-300 font-medium mb-1.5">
-                  Auditory Question Readout
-                </label>
-                <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5">
-                  <span className="text-xs text-slate-400">
-                    {state.voiceEnabled ? 'Speech Synthesis Active' : 'Speech Synthesis Disabled'}
-                  </span>
-                  <button
-                    onClick={() => {
-                      // simple local alert or toggle global context
-                      if ('speechSynthesis' in window) {
-                        // toggle via context
-                      }
-                    }}
-                    className="text-xs text-indigo-400 font-semibold"
-                  >
-                    Configured in Sidebar
-                  </button>
-                </div>
-              </div>
-            </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-2xl leading-none" aria-hidden>
+                      {p.emoji}
+                    </span>
+                    <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-[var(--muted)] tabular">
+                      {p.count} Q
+                    </span>
+                  </div>
+                  <h4 className="font-display mt-2.5 text-sm font-bold text-white">{p.name}</h4>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--muted)]">{p.desc}</p>
+                </Tappable>
+              );
+            })}
           </div>
+        </section>
 
-          {/* Start Button */}
-          <button
-            onClick={startInterview}
-            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold tracking-wide transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
-          >
-            <PlaySquare className="w-5 h-5" />
-            Begin Mock Interview
-          </button>
-        </div>
-      )}
-
-      {/* 2. ACTIVE INTERVIEW SCREEN */}
-      {screen === 'active' && currentQ && (
-        <div className="space-y-5 fade-in">
-          
-          {/* Header Progress Bar */}
-          <div className="flex items-center justify-between bg-slate-900 px-4 py-3 rounded-xl border border-slate-800">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Question {currentIndex + 1} of {interviewQuestions.length}
-              </span>
-              <span className="text-xs text-slate-600">•</span>
-              <span className="text-xs font-semibold text-indigo-400">
-                {currentQ.difficulty} Tier
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-amber-400 font-mono font-bold text-sm">
-              <Clock className="w-4 h-4" />
-              <span>{formatTime(timeLeft)}</span>
-            </div>
+        <section>
+          <SectionHeader title="Time per question" hint="Real rounds give you 5 to 8 minutes" />
+          <div className="flex gap-2">
+            {TIME_OPTIONS.map((t) => (
+              <Tappable
+                key={t}
+                onClick={() => setPerQuestion(t)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-2xl border py-3 text-xs font-bold transition-colors ${
+                  perQuestion === t
+                    ? 'border-[var(--brand-2)]/45 bg-fuchsia-500/10 text-fuchsia-200'
+                    : 'border-white/[0.09] bg-white/[0.04] text-[var(--muted)]'
+                }`}
+              >
+                <Clock className="h-4 w-4" /> {t / 60} min
+              </Tappable>
+            ))}
           </div>
+        </section>
 
-          {/* Timeline Bar */}
-          <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden">
-            <div 
-              className="bg-indigo-500 h-full transition-all duration-300"
-              style={{ width: `${((currentIndex + 1) / interviewQuestions.length) * 100}%` }}
+        <Tappable
+          onClick={start}
+          className="bg-brand flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/20"
+        >
+          <Play className="h-4.5 w-4.5" /> Start the round
+        </Tappable>
+
+        {state.interviewHistory.length > 0 && (
+          <section>
+            <SectionHeader
+              title="Past rounds"
+              hint={`Average ${Math.round(
+                state.interviewHistory.reduce((a, r) => a + r.score, 0) / state.interviewHistory.length,
+              )}%`}
             />
-          </div>
-
-          {/* Question Workspace */}
-          <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4">
-            
             <div className="space-y-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                Interview Scenario:
+              {state.interviewHistory.slice(0, 6).map((r) => (
+                <div key={r.id} className="card flex items-center justify-between gap-3 p-3.5">
+                  <div className="flex items-center gap-3">
+                    <History className="h-4 w-4 text-[var(--dim)]" />
+                    <div>
+                      <div className="text-[13px] font-bold text-white">{r.preset}</div>
+                      <div className="text-[11px] text-[var(--dim)]">
+                        {r.date} · {r.totalQuestions} questions
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    className="font-display rounded-xl px-2.5 py-1 text-sm font-bold tabular"
+                    style={{
+                      color: r.score >= 70 ? '#34d399' : r.score >= 45 ? '#fbbf24' : '#fb7185',
+                      background: r.score >= 70 ? '#34d3991a' : r.score >= 45 ? '#fbbf241a' : '#fb71851a',
+                    }}
+                  >
+                    {r.score}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
+
+  /* ------------------------------------------------------------ active */
+  if (screen === 'active' && current) {
+    const cat = getCategoryById(current.categoryId);
+    const frac = timeLeft / perQuestion;
+    const low = timeLeft <= 30;
+
+    return (
+      <div
+        className="fade-in mx-auto flex h-full max-w-3xl flex-col gap-4 p-4 pb-6 md:p-7"
+        data-accent={low ? 'rose' : (cat?.accent ?? 'fuchsia')}
+      >
+        {/* Timer bar */}
+        <div className="card flex items-center gap-4 p-4">
+          <Ring value={frac} size={60} stroke={5}>
+            <span className={`font-display text-[13px] font-bold tabular ${low ? 'text-rose-400' : 'text-white'}`}>
+              {fmt(timeLeft)}
+            </span>
+          </Ring>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <span className="text-[var(--muted)] tabular">
+                Question {index + 1} of {questions.length}
               </span>
-              <p className="text-xs md:text-sm text-slate-300 bg-slate-950 p-3 rounded-lg border border-slate-800/60 leading-relaxed">
-                {currentQ.scenario}
-              </p>
+              <span className="text-[var(--dim)]">{preset.name}</span>
             </div>
-
-            <div className="space-y-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400">
-                Interviewer Prompt:
-              </span>
-              <h3 className="text-base md:text-lg font-bold text-white leading-relaxed">
-                {currentQ.question}
-              </h3>
+            <div className="mt-2">
+              <Progress value={(index + (1 - frac)) / questions.length} height={5} />
             </div>
-
-            {/* Built-in Scratchpad */}
-            <div className="pt-2 space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Candidate Scratchpad (Notes & Outlines)</span>
-              </label>
-              <textarea
-                value={scratchpad}
-                onChange={(e) => setScratchpad(e.target.value)}
-                placeholder="Type code sketches, core architectural bullet points, or trade-offs here before evaluating..."
-                className="w-full h-32 bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 resize-none"
-              />
-            </div>
-
           </div>
-
-          {/* Action Footer */}
-          <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to exit the interview? Current score will be discarded.')) {
-                  setScreen('setup');
-                }
-              }}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-xl text-xs font-medium transition-colors"
-            >
-              Abandon Interview
-            </button>
-
-            <button
-              onClick={handleEvaluate}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
-            >
-              <span>Evaluate My Answer</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-
         </div>
-      )}
 
-      {/* 3. EVALUATION RUBRIC SCREEN */}
-      {screen === 'evaluation' && currentQ && (
-        <div className="space-y-5 fade-in">
-          
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Self-Evaluation Rubric
-            </h3>
-            <p className="text-xs text-slate-300 mt-1">
-              Compare your response against the authoritative answer. Be honest—check the key evaluation signals you covered.
-            </p>
-          </div>
-
-          {/* Ideal Answer Display */}
-          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Ideal Senior Response</span>
-            </div>
-
-            <div className="text-xs md:text-sm text-slate-300 space-y-2 leading-relaxed">
-              {/* Simply render the full ideal answer text cleanly */}
-              <div className="whitespace-pre-line font-medium">
-                {currentQ.idealAnswer}
-              </div>
-            </div>
-
-            {/* Candidate Scratchpad Review */}
-            {scratchpad.trim() && (
-              <div className="pt-3 border-t border-slate-800">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Your Scratchpad Notes:</span>
-                <pre className="bg-slate-900 p-2.5 rounded-lg text-xs text-slate-400 font-mono overflow-x-auto">
-                  {scratchpad}
-                </pre>
-              </div>
+        {/* Question */}
+        <div className="card flex-1 space-y-3 overflow-y-auto p-4 md:p-5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge>
+              <span aria-hidden>{cat?.emoji}</span> {cat?.shortName}
+            </Badge>
+            <DifficultyTag difficulty={current.difficulty} />
+            {state.voiceEnabled && (
+              <Tappable
+                onClick={() => speak(current.question)}
+                className="ml-auto rounded-lg p-1.5 text-[var(--dim)] hover:text-white"
+                title="Read the question aloud"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Tappable>
             )}
           </div>
 
-          {/* Actionable Checkboxes */}
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-            <span className="text-xs font-bold text-white block">
-              Evaluation Criteria:
-            </span>
-
-            <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={rubricsChecked[0]}
-                onChange={(e) => setRubricsChecked([e.target.checked, rubricsChecked[1], rubricsChecked[2]])}
-                className="mt-0.5 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950"
-              />
-              <span className="text-xs text-slate-200">
-                <strong>Core Trade-offs:</strong> Addressed the foundational architecture differences or memory layout.
-              </span>
-            </label>
-
-            <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={rubricsChecked[1]}
-                onChange={(e) => setRubricsChecked([rubricsChecked[0], e.target.checked, rubricsChecked[2]])}
-                className="mt-0.5 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950"
-              />
-              <span className="text-xs text-slate-200">
-                <strong>Deep Internals:</strong> Mentioned the precise hardware/JVM components (e.g., Load Barriers, CAS, Scalar Replacement).
-              </span>
-            </label>
-
-            <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={rubricsChecked[2]}
-                onChange={(e) => setRubricsChecked([rubricsChecked[0], rubricsChecked[1], e.target.checked])}
-                className="mt-0.5 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950"
-              />
-              <span className="text-xs text-slate-200">
-                <strong>Production Realities:</strong> Accounted for failure modes, performance limits, or common pitfalls.
-              </span>
-            </label>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-3">
+            <div className="eyebrow mb-1">The situation</div>
+            <p className="text-[12.5px] leading-relaxed text-[var(--muted)]">{current.scenario}</p>
           </div>
 
-          {/* Footer Submit */}
-          <button
-            onClick={submitEvaluation}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
-          >
-            <span>{currentIndex + 1 < interviewQuestions.length ? 'Submit Score & Next Question' : 'Complete Interview & View Scorecard'}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <p className="text-[15px] leading-relaxed font-semibold text-white">{current.question}</p>
 
+          <div>
+            <div className="eyebrow mb-1.5">Scratchpad — jot your structure before you speak</div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={6}
+              placeholder={'1. define the constraint\n2. the mechanism\n3. trade-offs\n4. what I would actually do'}
+              className="w-full resize-none rounded-2xl border border-white/[0.09] bg-black/30 p-3 font-mono text-[12px] leading-relaxed text-white placeholder-[var(--dim)] outline-none focus:border-[var(--a)]"
+            />
+          </div>
         </div>
-      )}
 
-      {/* 4. SCORECARD SCREEN */}
-      {screen === 'scorecard' && (
-        <div className="space-y-6 fade-in text-center py-4">
-          
-          <div className="w-16 h-16 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center mx-auto border border-indigo-500/20">
-            <Award className="w-8 h-8" />
+        <Tappable
+          onClick={submitAnswer}
+          className="bg-brand flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white"
+        >
+          I'm done — show the model answer <ArrowRight className="h-4 w-4" />
+        </Tappable>
+      </div>
+    );
+  }
+
+  /* ------------------------------------------------------------ review */
+  if (screen === 'review' && current) {
+    const cat = getCategoryById(current.categoryId);
+    return (
+      <div
+        className="fade-in mx-auto max-w-3xl space-y-4 p-4 pb-10 md:p-7"
+        data-accent={cat?.accent ?? 'fuchsia'}
+      >
+        <div className="flex items-center gap-2">
+          <Timer className="h-4 w-4 text-[var(--dim)]" />
+          <span className="text-[11px] font-bold text-[var(--dim)]">
+            Question {index + 1} of {questions.length} · self-assessment
+          </span>
+        </div>
+
+        <h3 className="font-display text-lg leading-snug font-bold text-white md:text-xl">{current.title}</h3>
+
+        {notes.trim() && (
+          <div className="card p-4">
+            <div className="eyebrow mb-1.5">What you wrote</div>
+            <pre className="font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-[var(--muted)]">
+              {notes}
+            </pre>
           </div>
+        )}
 
+        <div className="card p-4 md:p-5">
+          <div className="eyebrow mb-2">The model answer</div>
+          <Markdown text={current.idealAnswer} />
+          {current.codeSnippet && (
+            <div className="mt-3">
+              <CodeBlock code={current.codeSnippet} label="java" />
+            </div>
+          )}
+        </div>
+
+        <div className="card card-accent p-4">
+          <div className="eyebrow mb-3">Score yourself — be honest, it only helps you</div>
           <div className="space-y-2">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-              Interview Complete!
-            </h2>
-            <p className="text-xs md:text-sm text-slate-400 max-w-md mx-auto">
-              You've successfully finished the simulation. Your performance has been logged to your global readiness profile.
-            </p>
+            {RUBRIC.map((r, i) => (
+              <Tappable
+                key={i}
+                onClick={() => setChecks((c) => c.map((v, j) => (j === i ? !v : v)))}
+                className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left text-[12.5px] font-medium transition-colors ${
+                  checks[i]
+                    ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
+                    : 'border-white/[0.09] bg-white/[0.03] text-[var(--muted)]'
+                }`}
+              >
+                <span
+                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${
+                    checks[i] ? 'border-emerald-400 bg-emerald-400 text-black' : 'border-white/20'
+                  }`}
+                >
+                  {checks[i] && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                </span>
+                {r}
+              </Tappable>
+            ))}
           </div>
-
-          {/* Final Score View */}
-          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 max-w-sm mx-auto space-y-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-              Overall Signal Score
-            </span>
-            <div className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
-              {finalPercentage}%
-            </div>
-            
-            <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-slate-950 text-indigo-400 border border-slate-800">
-              {finalPercentage >= 80 ? 'Strong Hire Signal' : finalPercentage >= 50 ? 'Leaning Hire' : 'Needs Calibration'}
-            </div>
-          </div>
-
-          {/* Feedback details */}
-          <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800/60 max-w-md mx-auto text-left space-y-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-              Staff Assessment Summary
-            </span>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              {finalPercentage >= 80 ? (
-                "Exceptional depth. You provided authoritative architectural boundaries and communicated multi-threaded hardware constraints smoothly."
-              ) : finalPercentage >= 50 ? (
-                "Solid theoretical fundamentals. Ensure you emphasize the precise failure modes (like allocation stalls or thread pinning) in every answer."
-              ) : (
-                "Review the Ideal Answers in the study library. Focus specifically on bridging high-level APIs with internal HotSpot memory behaviors."
-              )}
-            </p>
-          </div>
-
-          {/* Restart */}
-          <button
-            onClick={() => setScreen('setup')}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Take Another Simulation
-          </button>
-
         </div>
-      )}
 
+        <Tappable
+          onClick={nextQuestion}
+          className="bg-brand flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white"
+        >
+          {index + 1 >= questions.length ? 'Finish and see my scorecard' : 'Next question'}
+          <ArrowRight className="h-4 w-4" />
+        </Tappable>
+      </div>
+    );
+  }
+
+  /* ------------------------------------------------------------ scorecard */
+  const verdict =
+    finalPct >= 80
+      ? { title: 'Interview ready', emoji: '\u{1F451}', note: 'That is a hire signal. Keep the streak going.' }
+      : finalPct >= 55
+        ? { title: 'Nearly there', emoji: '\u{1F4AA}', note: 'Solid core. Tighten the trade-off framing and you are set.' }
+        : { title: 'Keep grinding', emoji: '\u{1F331}', note: 'Go back to the library for these domains and try again tomorrow.' };
+
+  return (
+    <div className="fade-in mx-auto max-w-2xl space-y-5 p-4 pb-10 md:p-7" data-accent="fuchsia">
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="card ring-brand relative overflow-hidden p-6 text-center"
+        >
+          <div className="pointer-events-none absolute -top-20 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-fuchsia-500/20 blur-3xl" />
+          <div className="relative">
+            <div className="text-5xl" aria-hidden>
+              {verdict.emoji}
+            </div>
+            <div className="font-display text-brand mt-3 text-6xl leading-none font-black tabular">
+              {finalPct}%
+            </div>
+            <h3 className="font-display mt-2 text-lg font-bold text-white">{verdict.title}</h3>
+            <p className="mx-auto mt-1 max-w-sm text-[12.5px] text-[var(--muted)]">{verdict.note}</p>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="card p-4">
+        <div className="eyebrow mb-3">Per question</div>
+        <div className="space-y-2.5">
+          {questions.map((q, i) => {
+            const s = scores[i] ?? 0;
+            return (
+              <div key={q.id} className="flex items-center gap-3">
+                <span className="w-6 shrink-0 font-mono text-[11px] text-[var(--dim)] tabular">{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-[12px] text-[var(--muted)]">{q.title}</span>
+                <div className="flex gap-1">
+                  {[0, 1, 2].map((d) => (
+                    <span
+                      key={d}
+                      className={`h-2 w-6 rounded-full ${d < s ? 'bg-emerald-400' : 'bg-white/10'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="card p-4 text-center">
+        <div className="eyebrow">Overall readiness</div>
+        <div className="font-display mt-1 text-2xl font-bold text-white tabular">{stats.readiness}%</div>
+        <p className="mt-1 text-[11.5px] text-[var(--muted)]">
+          Blended from questions mastered, recall ratings and mock scores.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Tappable
+          onClick={() => setScreen('setup')}
+          className="flex items-center justify-center gap-1.5 rounded-2xl border border-white/[0.09] bg-white/[0.04] py-3 text-xs font-bold text-[var(--muted)] hover:text-white"
+        >
+          <RotateCcw className="h-4 w-4" /> New round
+        </Tappable>
+        <Tappable onClick={start} className="bg-brand rounded-2xl py-3 text-xs font-bold text-white">
+          Run it back
+        </Tappable>
+      </div>
     </div>
   );
 };

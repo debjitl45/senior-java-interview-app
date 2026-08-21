@@ -1,6 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  CATEGORIES,
+  QUESTIONS,
+  TOTAL_QUESTIONS,
+  TOTAL_XP,
+  XP_BY_DIFFICULTY,
+  getQuestionById,
+} from '../data/questions';
+import { ACHIEVEMENTS, rankFor, type Achievement, type Rank } from '../theme';
 
-interface InterviewRecord {
+export type FlashcardRating = 'Again' | 'Hard' | 'Good' | 'Easy';
+
+export interface InterviewRecord {
   id: string;
   date: string;
   score: number;
@@ -11,197 +22,336 @@ interface InterviewRecord {
 interface AppState {
   savedQuestions: string[];
   completedQuestions: string[];
-  flashcardRatings: Record<string, 'Again' | 'Hard' | 'Good' | 'Easy'>;
+  solvedDefects: string[];
+  flashcardRatings: Record<string, FlashcardRating>;
   streak: number;
+  bestStreak: number;
   lastActiveDate: string;
   interviewHistory: InterviewRecord[];
-  theme: 'dark' | 'light';
   voiceEnabled: boolean;
+  /** Questions the user aims to master each day. */
+  dailyGoal: number;
+  /** date -> number of questions mastered that day, for the goal ring. */
+  dailyProgress: Record<string, number>;
+  /** Level the user has already been congratulated for, so we only celebrate once. */
+  celebratedLevel: number;
+}
+
+export interface Stats {
+  xp: number;
+  totalXp: number;
+  level: number;
+  rank: Rank;
+  nextRank: Rank | null;
+  levelProgress: number;
+  mastered: number;
+  total: number;
+  saved: number;
+  streak: number;
+  bestStreak: number;
+  todayCount: number;
+  dailyGoal: number;
+  readiness: number;
+  defectsSolved: number;
 }
 
 interface AppContextType {
   state: AppState;
+  stats: Stats;
+  achievements: { achievement: Achievement; unlocked: boolean }[];
   toggleSaveQuestion: (id: string) => void;
-  toggleCompleteQuestion: (id: string) => void;
-  rateFlashcard: (id: string, rating: 'Again' | 'Hard' | 'Good' | 'Easy') => void;
+  toggleCompleteQuestion: (id: string) => boolean;
+  isSaved: (id: string) => boolean;
+  isCompleted: (id: string) => boolean;
+  markDefectSolved: (id: string) => void;
+  rateFlashcard: (id: string, rating: FlashcardRating) => void;
   saveInterview: (record: Omit<InterviewRecord, 'id' | 'date'>) => void;
   toggleVoice: () => void;
+  setDailyGoal: (n: number) => void;
+  acknowledgeLevel: (level: number) => void;
   resetProgress: () => void;
+  categoryProgress: (categoryId: string) => { done: number; total: number; pct: number };
   getReadinessScore: () => number;
 }
+
+const today = () => new Date().toISOString().split('T')[0];
 
 const initialState: AppState = {
   savedQuestions: [],
   completedQuestions: [],
+  solvedDefects: [],
   flashcardRatings: {},
   streak: 1,
-  lastActiveDate: new Date().toISOString().split('T')[0],
+  bestStreak: 1,
+  lastActiveDate: today(),
   interviewHistory: [],
-  theme: 'dark',
-  voiceEnabled: true
+  voiceEnabled: true,
+  dailyGoal: 5,
+  dailyProgress: {},
+  celebratedLevel: 1,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'JavaMasterPro_AppState_v1';
+const STORAGE_KEY = 'JavaMaster_AppState_v2';
+const LEGACY_KEY = 'JavaMasterPro_AppState_v1';
+
+const daysBetween = (a: string, b: string) => {
+  const ms = new Date(b).getTime() - new Date(a).getTime();
+  return Math.round(ms / 86_400_000);
+};
+
+const load = (): AppState => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_KEY);
+    if (!raw) return initialState;
+
+    const parsed = JSON.parse(raw) as Partial<AppState>;
+    const t = today();
+
+    let streak = parsed.streak ?? 1;
+    if (parsed.lastActiveDate) {
+      const gap = daysBetween(parsed.lastActiveDate, t);
+      if (gap === 1) streak += 1;
+      else if (gap > 1) streak = 1;
+    }
+
+    return {
+      ...initialState,
+      ...parsed,
+      streak,
+      bestStreak: Math.max(parsed.bestStreak ?? 1, streak),
+      lastActiveDate: t,
+    };
+  } catch {
+    return initialState;
+  }
+};
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AppState>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Calculate streak updates
-        const today = new Date().toISOString().split('T')[0];
-        let currentStreak = parsed.streak || 1;
-        
-        if (parsed.lastActiveDate) {
-          const lastDate = new Date(parsed.lastActiveDate);
-          const currentDate = new Date(today);
-          const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          
-          if (diffDays === 1) {
-            currentStreak += 1;
-          } else if (diffDays > 1) {
-            currentStreak = 1;
-          }
-        }
-        
-        return {
-          ...initialState,
-          ...parsed,
-          streak: currentStreak,
-          lastActiveDate: today
-        };
-      }
-    } catch (e) {
-      console.error('Failed to load state from localStorage', e);
-    }
-    return initialState;
-  });
+  const [state, setState] = useState<AppState>(load);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) {
-      console.error('Failed to save state to localStorage', e);
+    } catch {
+      /* storage can be unavailable (private mode); progress is best-effort */
     }
   }, [state]);
 
-  const toggleSaveQuestion = (id: string) => {
-    setState(prev => {
-      const exists = prev.savedQuestions.includes(id);
+  const toggleSaveQuestion = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      savedQuestions: prev.savedQuestions.includes(id)
+        ? prev.savedQuestions.filter((q) => q !== id)
+        : [...prev.savedQuestions, id],
+    }));
+  }, []);
+
+  /** Returns true when the question was just marked as mastered (for celebration effects). */
+  const toggleCompleteQuestion = useCallback((id: string) => {
+    let becameComplete = false;
+    setState((prev) => {
+      const has = prev.completedQuestions.includes(id);
+      becameComplete = !has;
+      const t = today();
+      const delta = has ? -1 : 1;
       return {
         ...prev,
-        savedQuestions: exists 
-          ? prev.savedQuestions.filter(qId => qId !== id)
-          : [...prev.savedQuestions, id]
+        completedQuestions: has
+          ? prev.completedQuestions.filter((q) => q !== id)
+          : [...prev.completedQuestions, id],
+        dailyProgress: {
+          ...prev.dailyProgress,
+          [t]: Math.max(0, (prev.dailyProgress[t] ?? 0) + delta),
+        },
       };
     });
-  };
+    return becameComplete;
+  }, []);
 
-  const toggleCompleteQuestion = (id: string) => {
-    setState(prev => {
-      const exists = prev.completedQuestions.includes(id);
+  const markDefectSolved = useCallback((id: string) => {
+    setState((prev) =>
+      prev.solvedDefects.includes(id)
+        ? prev
+        : { ...prev, solvedDefects: [...prev.solvedDefects, id] },
+    );
+  }, []);
+
+  const rateFlashcard = useCallback((id: string, rating: FlashcardRating) => {
+    setState((prev) => {
+      const learned = rating === 'Good' || rating === 'Easy';
+      const alreadyDone = prev.completedQuestions.includes(id);
+      const t = today();
       return {
         ...prev,
-        completedQuestions: exists
-          ? prev.completedQuestions.filter(qId => qId !== id)
-          : [...prev.completedQuestions, id]
+        flashcardRatings: { ...prev.flashcardRatings, [id]: rating },
+        completedQuestions:
+          learned && !alreadyDone ? [...prev.completedQuestions, id] : prev.completedQuestions,
+        dailyProgress:
+          learned && !alreadyDone
+            ? { ...prev.dailyProgress, [t]: (prev.dailyProgress[t] ?? 0) + 1 }
+            : prev.dailyProgress,
       };
     });
-  };
+  }, []);
 
-  const rateFlashcard = (id: string, rating: 'Again' | 'Hard' | 'Good' | 'Easy') => {
-    setState(prev => ({
+  const saveInterview = useCallback((record: Omit<InterviewRecord, 'id' | 'date'>) => {
+    setState((prev) => ({
       ...prev,
-      flashcardRatings: {
-        ...prev.flashcardRatings,
-        [id]: rating
-      },
-      // Automatically mark as studied/completed if rated Good or Easy
-      completedQuestions: (rating === 'Good' || rating === 'Easy') && !prev.completedQuestions.includes(id)
-        ? [...prev.completedQuestions, id]
-        : prev.completedQuestions
+      interviewHistory: [
+        {
+          ...record,
+          id: `int_${Date.now()}`,
+          date: new Date().toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          }),
+        },
+        ...prev.interviewHistory,
+      ].slice(0, 50),
     }));
-  };
+  }, []);
 
-  const saveInterview = (record: Omit<InterviewRecord, 'id' | 'date'>) => {
-    const newRecord: InterviewRecord = {
-      ...record,
-      id: 'int_' + Date.now(),
-      date: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    };
-    setState(prev => ({
-      ...prev,
-      interviewHistory: [newRecord, ...prev.interviewHistory]
-    }));
-  };
+  const toggleVoice = useCallback(() => {
+    setState((prev) => ({ ...prev, voiceEnabled: !prev.voiceEnabled }));
+  }, []);
 
-  const toggleVoice = () => {
-    setState(prev => ({
-      ...prev,
-      voiceEnabled: !prev.voiceEnabled
-    }));
-  };
+  const setDailyGoal = useCallback((n: number) => {
+    setState((prev) => ({ ...prev, dailyGoal: Math.max(1, Math.min(50, n)) }));
+  }, []);
 
-  const resetProgress = () => {
-    if (window.confirm('Are you sure you want to reset all preparation progress? This cannot be undone.')) {
-      setState(initialState);
+  const acknowledgeLevel = useCallback((level: number) => {
+    setState((prev) => (prev.celebratedLevel >= level ? prev : { ...prev, celebratedLevel: level }));
+  }, []);
+
+  const resetProgress = useCallback(() => {
+    if (window.confirm('Reset all progress? Your XP, streak and bookmarks will be erased.')) {
+      setState({ ...initialState, lastActiveDate: today() });
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LEGACY_KEY);
     }
-  };
+  }, []);
 
-  const getReadinessScore = () => {
-    // Total out of 100 based on completed questions, flashcard mastery, and interview performance
-    // Total questions = 16
-    const totalQuestions = 16;
-    const completedWeight = (state.completedQuestions.length / totalQuestions) * 40;
-    
-    // Flashcard ratings
+  const stats: Stats = useMemo(() => {
+    const xp = state.completedQuestions.reduce((sum, id) => {
+      const q = getQuestionById(id);
+      return q ? sum + XP_BY_DIFFICULTY[q.difficulty] : sum;
+    }, 0);
+
+    const { rank, next, progress } = rankFor(xp);
+
+    const masteryWeight = (state.completedQuestions.length / TOTAL_QUESTIONS) * 55;
+
     const ratings = Object.values(state.flashcardRatings);
-    let flashcardScore = 0;
-    if (ratings.length > 0) {
-      const points = ratings.reduce((acc, r) => {
-        if (r === 'Easy') return acc + 3;
-        if (r === 'Good') return acc + 2;
-        if (r === 'Hard') return acc + 1;
-        return acc;
-      }, 0);
-      flashcardScore = (points / (ratings.length * 3)) * 30;
-    }
+    const recallWeight = ratings.length
+      ? (ratings.reduce(
+          (acc, r) => acc + (r === 'Easy' ? 3 : r === 'Good' ? 2 : r === 'Hard' ? 1 : 0),
+          0,
+        ) /
+          (ratings.length * 3)) *
+        20
+      : 0;
 
-    // Interview history
-    let interviewScore = 0;
-    if (state.interviewHistory.length > 0) {
-      const avgScore = state.interviewHistory.reduce((acc, curr) => acc + curr.score, 0) / state.interviewHistory.length;
-      interviewScore = (avgScore / 100) * 30;
-    }
+    const mockWeight = state.interviewHistory.length
+      ? (state.interviewHistory.reduce((a, r) => a + r.score, 0) /
+          state.interviewHistory.length /
+          100) *
+        25
+      : 0;
 
-    return Math.min(100, Math.round(completedWeight + flashcardScore + interviewScore));
+    return {
+      xp,
+      totalXp: TOTAL_XP,
+      level: rank.level,
+      rank,
+      nextRank: next,
+      levelProgress: progress,
+      mastered: state.completedQuestions.length,
+      total: TOTAL_QUESTIONS,
+      saved: state.savedQuestions.length,
+      streak: state.streak,
+      bestStreak: state.bestStreak,
+      todayCount: state.dailyProgress[today()] ?? 0,
+      dailyGoal: state.dailyGoal,
+      readiness: Math.min(100, Math.round(masteryWeight + recallWeight + mockWeight)),
+      defectsSolved: state.solvedDefects.length,
+    };
+  }, [state]);
+
+  const achievements = useMemo(() => {
+    const done = new Set(state.completedQuestions);
+    const masterTier = QUESTIONS.filter((q) => q.difficulty === 'Master' && done.has(q.id)).length;
+    const clearedDomain = CATEGORIES.some((c) => {
+      const inCat = QUESTIONS.filter((q) => q.categoryId === c.id);
+      return inCat.length > 0 && inCat.every((q) => done.has(q.id));
+    });
+    const bestMock = state.interviewHistory.reduce((m, r) => Math.max(m, r.score), 0);
+
+    const unlockedIds = new Set<string>();
+    if (done.size >= 1) unlockedIds.add('first-blood');
+    if (done.size >= 10) unlockedIds.add('ten-down');
+    if (done.size >= 50) unlockedIds.add('fifty-down');
+    if (done.size >= 100) unlockedIds.add('century');
+    if (state.bestStreak >= 3) unlockedIds.add('streak-3');
+    if (state.bestStreak >= 7) unlockedIds.add('streak-7');
+    if (state.bestStreak >= 30) unlockedIds.add('streak-30');
+    if (clearedDomain) unlockedIds.add('domain-clear');
+    if (masterTier >= 5) unlockedIds.add('boss-slayer');
+    if (state.interviewHistory.length >= 1) unlockedIds.add('mock-ready');
+    if (bestMock >= 80) unlockedIds.add('sharp-shooter');
+    if (state.solvedDefects.length >= 5) unlockedIds.add('bug-hunter');
+
+    return ACHIEVEMENTS.map((a) => ({ achievement: a, unlocked: unlockedIds.has(a.id) }));
+  }, [state]);
+
+  const categoryProgress = useCallback(
+    (categoryId: string) => {
+      const inCat = QUESTIONS.filter((q) => q.categoryId === categoryId);
+      const done = inCat.filter((q) => state.completedQuestions.includes(q.id)).length;
+      return {
+        done,
+        total: inCat.length,
+        pct: inCat.length ? Math.round((done / inCat.length) * 100) : 0,
+      };
+    },
+    [state.completedQuestions],
+  );
+
+  const isSaved = useCallback(
+    (id: string) => state.savedQuestions.includes(id),
+    [state.savedQuestions],
+  );
+  const isCompleted = useCallback(
+    (id: string) => state.completedQuestions.includes(id),
+    [state.completedQuestions],
+  );
+
+  const value: AppContextType = {
+    state,
+    stats,
+    achievements,
+    toggleSaveQuestion,
+    toggleCompleteQuestion,
+    isSaved,
+    isCompleted,
+    markDefectSolved,
+    rateFlashcard,
+    saveInterview,
+    toggleVoice,
+    setDailyGoal,
+    acknowledgeLevel,
+    resetProgress,
+    categoryProgress,
+    getReadinessScore: () => stats.readiness,
   };
 
-  return (
-    <AppContext.Provider value={{
-      state,
-      toggleSaveQuestion,
-      toggleCompleteQuestion,
-      rateFlashcard,
-      saveInterview,
-      toggleVoice,
-      resetProgress,
-      getReadinessScore
-    }}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
 export const useApp = () => {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useApp must be used within an AppProvider');
+  return ctx;
 };

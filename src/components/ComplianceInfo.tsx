@@ -1,268 +1,311 @@
 import React, { useState } from 'react';
-import { 
-  Database, 
-  CheckCircle2, 
-  Trash2, 
-  Download, 
-  Smartphone, 
-  Lock
+import { motion } from 'framer-motion';
+import {
+  Check,
+  Database,
+  Download,
+  Flame,
+  Lock,
+  Minus,
+  Plus,
+  ShieldCheck,
+  Smartphone,
+  Trash2,
+  Trophy,
+  WifiOff,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { CATEGORIES, CODE_DEFECTS, QUESTIONS } from '../data/questions';
+import { iconFor } from '../theme';
+import { Progress, Ring, SectionHeader, StatTile, Tappable } from './ui';
+
+type Tab = 'profile' | 'privacy';
 
 export const ComplianceInfo: React.FC = () => {
-  const { state, resetProgress } = useApp();
-  const [activeTab, setActiveTab] = useState<'compliance' | 'privacy' | 'data'>('compliance');
+  const { state, stats, achievements, categoryProgress, setDailyGoal, resetProgress } = useApp();
+  const [tab, setTab] = useState<Tab>('profile');
 
   const exportData = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `JavaMasterPro_Export_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `JavaMaster_progress_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
+  const unlocked = achievements.filter((a) => a.unlocked);
+
   return (
-    <div className="p-4 md:p-6 space-y-6 fade-in max-w-4xl mx-auto">
-      
+    <div className="fade-in mx-auto max-w-4xl space-y-6 p-4 pb-10 md:p-7">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/10 text-violet-400 border border-violet-500/20 font-bold">
-            Store Certified
-          </span>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-            App Info & Store Compliance
-          </h2>
-        </div>
-        <p className="text-xs md:text-sm text-slate-400 mt-1">
-          Adhering strictly to Google Play Store and Apple App Store review and safety guidelines.
+        <h2 className="font-display text-2xl font-bold text-white md:text-3xl">Your profile</h2>
+        <p className="mt-1 text-xs text-[var(--muted)] md:text-sm">
+          Everything lives on this device. Nothing is uploaded, ever.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 text-xs">
-        <button
-          onClick={() => setActiveTab('compliance')}
-          className={`pb-3 px-1 font-semibold transition-colors relative ${
-            activeTab === 'compliance' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          <span>App Store Guidelines</span>
-          {activeTab === 'compliance' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500" />}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('privacy')}
-          className={`pb-3 px-1 font-semibold transition-colors relative ${
-            activeTab === 'privacy' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          <span>Privacy & Terms</span>
-          {activeTab === 'privacy' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500" />}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('data')}
-          className={`pb-3 px-1 font-semibold transition-colors relative ${
-            activeTab === 'data' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          <span>Data Management</span>
-          {activeTab === 'data' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500" />}
-        </button>
+      <div className="flex gap-1 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1">
+        {(
+          [
+            { id: 'profile', label: 'Progress' },
+            { id: 'privacy', label: 'Privacy & data' },
+          ] as const
+        ).map((t) => (
+          <Tappable
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`relative flex-1 rounded-xl py-2.5 text-xs font-bold transition-colors ${
+              tab === t.id ? 'text-white' : 'text-[var(--dim)]'
+            }`}
+          >
+            {tab === t.id && (
+              <motion.span
+                layoutId="profileTab"
+                className="absolute inset-0 rounded-xl border border-white/[0.1] bg-white/[0.07]"
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              />
+            )}
+            <span className="relative">{t.label}</span>
+          </Tappable>
+        ))}
       </div>
 
-      {/* Tab 1: Store Guidelines */}
-      {activeTab === 'compliance' && (
-        <div className="space-y-4 fade-in">
-          
-          <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-white">
-              <Smartphone className="w-4 h-4 text-indigo-400" />
-              <span>Reviewer Guidelines Adherence</span>
-            </div>
-            
-            <p className="text-xs text-slate-300 leading-relaxed">
-              This mobile application has been carefully architected to guarantee immediate acceptance when bundled via modern web wrapper frameworks (Capacitor, React Native Web, or trusted PWA manifests).
-            </p>
+      {tab === 'profile' ? (
+        <div className="space-y-6">
+          {/* Level */}
+          <section className="card ring-brand relative overflow-hidden p-5" data-accent="fuchsia">
+            <div className="pointer-events-none absolute -top-16 -right-10 h-40 w-40 rounded-full bg-fuchsia-500/15 blur-3xl" />
+            <div className="relative flex flex-wrap items-center gap-5">
+              <Ring value={stats.levelProgress} size={92} stroke={7}>
+                <div className="text-center leading-none">
+                  <div className="text-2xl" aria-hidden>
+                    {stats.rank.emoji}
+                  </div>
+                  <div className="mt-1 text-[10px] font-bold text-[var(--dim)]">LV {stats.level}</div>
+                </div>
+              </Ring>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              
-              <div className="flex items-start gap-2.5 bg-slate-950 p-3 rounded-xl border border-slate-800/60">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs font-semibold text-white block">Offline Core Capabilities</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    100% of study modules, interactive flashcards, and rubrics execute directly on the mobile OS. Zero runtime reliance on remote REST servers.
-                  </p>
+              <div className="min-w-[180px] flex-1">
+                <div className="eyebrow">Current rank</div>
+                <h3 className="font-display text-xl font-bold text-white">{stats.rank.name}</h3>
+                <div className="mt-2">
+                  <Progress value={stats.levelProgress} height={7} />
+                  <div className="mt-1.5 flex justify-between text-[10.5px] font-bold text-[var(--dim)] tabular">
+                    <span>{stats.xp.toLocaleString()} XP</span>
+                    <span>
+                      {stats.nextRank
+                        ? `${(stats.nextRank.xp - stats.xp).toLocaleString()} to ${stats.nextRank.name}`
+                        : 'Max rank reached'}
+                    </span>
+                  </div>
                 </div>
               </div>
+            </div>
+          </section>
 
-              <div className="flex items-start gap-2.5 bg-slate-950 p-3 rounded-xl border border-slate-800/60">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs font-semibold text-white block">Ergonomic Touch Targets</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    All interactive elements exceed the Google Material and Apple Human Interface minimum standard of 48x48dp clickable hitboxes.
-                  </p>
-                </div>
+          {/* Stats */}
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div data-accent="violet">
+              <StatTile label="Mastered" value={stats.mastered} sub={`of ${QUESTIONS.length}`} />
+            </div>
+            <div data-accent="orange">
+              <StatTile
+                label="Streak"
+                value={stats.streak}
+                sub={`best ${stats.bestStreak} day${stats.bestStreak === 1 ? '' : 's'}`}
+                icon={<Flame className="h-3.5 w-3.5" />}
+              />
+            </div>
+            <div data-accent="amber">
+              <StatTile label="Bugs solved" value={`${stats.defectsSolved}/${CODE_DEFECTS.length}`} />
+            </div>
+            <div data-accent="emerald">
+              <StatTile
+                label="Badges"
+                value={`${unlocked.length}/${achievements.length}`}
+                icon={<Trophy className="h-3.5 w-3.5" />}
+              />
+            </div>
+          </section>
+
+          {/* Daily goal */}
+          <section className="card p-4" data-accent="cyan">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="eyebrow">Daily goal</div>
+                <p className="mt-1 text-[12.5px] text-[var(--muted)]">
+                  Questions to master each day. Small and consistent beats heroic and abandoned.
+                </p>
               </div>
-
-              <div className="flex items-start gap-2.5 bg-slate-950 p-3 rounded-xl border border-slate-800/60">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs font-semibold text-white block">No Infringing IP</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Original expert-curated technical knowledge tailored for 5+ YOE Senior & Staff roles. No scraped copyright material.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5 bg-slate-950 p-3 rounded-xl border border-slate-800/60">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs font-semibold text-white block">Absolute Data Autonomy</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    No third-party SDK analytics, no advertising IDs, and no hidden telemetry tracking scripts are injected into the viewports.
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Device Hardware Spec */}
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <span className="text-xs font-semibold text-white block">App Packaging Profile</span>
-              <span className="text-[11px] text-slate-400">Targeting Android API 34+ and iOS 17+ ecosystems</span>
-            </div>
-            
-            <div className="flex gap-2">
-              <span className="px-2 py-1 bg-slate-950 text-slate-400 rounded text-xs font-mono border border-slate-800">
-                v1.2.0-Prod
-              </span>
-              <span className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded text-xs font-mono border border-indigo-500/20">
-                64-bit ARM
-              </span>
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {/* Tab 2: Privacy Policy */}
-      {activeTab === 'privacy' && (
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4 fade-in">
-          
-          <div className="flex items-center gap-2 text-sm font-bold text-white">
-            <Lock className="w-4 h-4 text-indigo-400" />
-            <span>Client-Side Privacy Policy</span>
-          </div>
-
-          <div className="space-y-3 text-xs text-slate-300 leading-relaxed max-h-[350px] overflow-y-auto pr-2">
-            <p>
-              <strong>Effective Date:</strong> January 1, 2026
-            </p>
-            <p>
-              This Privacy Policy applies to the <strong>JavaMaster Pro</strong> mobile and web application. We respect your privacy and are committed to protecting it through our compliance with this policy.
-            </p>
-            
-            <h4 className="font-bold text-white text-xs mt-2">1. Data We Collect</h4>
-            <p>
-              <strong>We do not collect any personal data.</strong> All data related to your preparation, including saved questions, customized interview settings, scratchpad inputs, and score history, is stored completely on your local device utilizing native HTML5 Web Storage capabilities.
-            </p>
-
-            <h4 className="font-bold text-white text-xs mt-2">2. Third-Party Services</h4>
-            <p>
-              This application does not integrate with any remote tracking, behavioral remarketing, or analytical SDKs. We do not sell, share, or broadcast your scores or study activity to any external corporate entity.
-            </p>
-
-            <h4 className="font-bold text-white text-xs mt-2">3. User Permissions</h4>
-            <p>
-              The application utilizes the native standard **Web Speech API** for optional auditory dictation. This API operates locally or through your device's built-in operating system accessibility layers and requires no microphone recording or outbound streaming permissions.
-            </p>
-
-            <h4 className="font-bold text-white text-xs mt-2">4. Terms of Service</h4>
-            <p>
-              By utilizing this preparation tool, you understand that the answers provided represent curated technical guidance based on standard Tier-1 engineering interview patterns. We do not guarantee employment or specific interview outcomes.
-            </p>
-          </div>
-
-        </div>
-      )}
-
-      {/* Tab 3: Data Management */}
-      {activeTab === 'data' && (
-        <div className="space-y-4 fade-in">
-          
-          <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-white">
-              <Database className="w-4 h-4 text-indigo-400" />
-              <span>Persistent Storage Operations</span>
-            </div>
-
-            <p className="text-xs text-slate-300">
-              Manage your local state footprint. You can securely backup your preparation state or completely clear it if passing your physical device to another candidate.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              
-              {/* Export */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between space-y-3">
-                <div>
-                  <span className="text-xs font-semibold text-white block">Export Profile</span>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Download your flashcard readiness matrices and mock assessment history as a structured JSON file.
-                  </p>
-                </div>
-
-                <button
-                  onClick={exportData}
-                  className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 border border-slate-700/50"
+              <div className="flex shrink-0 items-center gap-2">
+                <Tappable
+                  onClick={() => setDailyGoal(stats.dailyGoal - 1)}
+                  className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.09] bg-white/[0.04] text-white"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Backup JSON</span>
-                </button>
-              </div>
-
-              {/* Reset */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between space-y-3">
-                <div>
-                  <span className="text-xs font-semibold text-rose-400 block">Danger Zone</span>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Permanently purge all stored bookmarks, studied indicators, active streaks, and interview scores from this hardware.
-                  </p>
-                </div>
-
-                <button
-                  onClick={resetProgress}
-                  className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 border border-rose-500/20"
+                  <Minus className="h-4 w-4" />
+                </Tappable>
+                <span className="font-display w-9 text-center text-xl font-bold text-white tabular">
+                  {stats.dailyGoal}
+                </span>
+                <Tappable
+                  onClick={() => setDailyGoal(stats.dailyGoal + 1)}
+                  className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.09] bg-white/[0.04] text-white"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Purge App State</span>
-                </button>
+                  <Plus className="h-4 w-4" />
+                </Tappable>
               </div>
+            </div>
+          </section>
 
+          {/* Per-domain */}
+          <section>
+            <SectionHeader title="Domain mastery" hint="Where you are strong, and where you are not" />
+            <div className="space-y-2">
+              {CATEGORIES.map((c) => {
+                const p = categoryProgress(c.id);
+                const Icon = iconFor(c.icon);
+                return (
+                  <div key={c.id} data-accent={c.accent} className="card flex items-center gap-3 p-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--a-line)] bg-[var(--a-soft)] text-[var(--a)]">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-[12.5px] font-bold text-white">{c.name}</span>
+                        <span className="text-[11px] font-bold text-[var(--dim)] tabular">
+                          {p.done}/{p.total}
+                        </span>
+                      </div>
+                      <div className="mt-1.5">
+                        <Progress value={p.total ? p.done / p.total : 0} height={4} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Badges */}
+          <section>
+            <SectionHeader title="Badges" hint={`${unlocked.length} of ${achievements.length} unlocked`} />
+            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+              {achievements.map(({ achievement, unlocked: got }) => (
+                <div
+                  key={achievement.id}
+                  title={achievement.description}
+                  className={`card p-3 text-center ${got ? '' : 'opacity-40 grayscale'}`}
+                  data-accent="lime"
+                >
+                  <div className="text-2xl" aria-hidden>
+                    {achievement.emoji}
+                  </div>
+                  <div className="font-display mt-1.5 text-[11px] leading-tight font-bold text-white">
+                    {achievement.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Privacy */}
+          <section className="card p-5" data-accent="emerald">
+            <div className="flex items-center gap-2.5">
+              <div className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--a-line)] bg-[var(--a-soft)] text-[var(--a)]">
+                <Lock className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-sm font-bold text-white">No accounts. No tracking.</h3>
+                <p className="text-[11.5px] text-[var(--muted)]">Your progress never leaves this device.</p>
+              </div>
             </div>
 
-          </div>
+            <ul className="mt-4 space-y-2.5">
+              {[
+                'No sign-up, no email, no personal data collected at any point.',
+                'No analytics SDKs, no advertising identifiers, no third-party trackers.',
+                'Progress, bookmarks and mock scores are stored in this device’s local storage only.',
+                'All question content ships inside the app, so it works fully offline.',
+                'Uninstalling the app deletes everything. There is no server-side copy to request.',
+              ].map((line, i) => (
+                <li key={i} className="flex gap-2.5 text-[12.5px] leading-relaxed text-[var(--muted)]">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </section>
 
-          {/* Current footprint */}
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="text-slate-400">Current Storage Keys:</span>
-            <div className="flex gap-3 text-white font-mono">
-              <span>Saved: {state.savedQuestions.length}</span>
-              <span>Mastered: {state.completedQuestions.length}</span>
-              <span>Interviews: {state.interviewHistory.length}</span>
+          {/* Platform */}
+          <section className="grid gap-3 sm:grid-cols-3">
+            {[
+              { icon: WifiOff, label: 'Works offline', body: 'Every question is bundled. No network needed.', accent: 'cyan' },
+              { icon: Smartphone, label: 'Built for mobile', body: 'Android API 34+ and iOS 17+, safe-area aware.', accent: 'violet' },
+              { icon: ShieldCheck, label: 'Store compliant', body: 'No user-generated content, ads or tracking.', accent: 'emerald' },
+            ].map((c) => {
+              const Icon = c.icon;
+              return (
+                <div key={c.label} data-accent={c.accent} className="card p-4">
+                  <div className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--a-line)] bg-[var(--a-soft)] text-[var(--a)]">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <h4 className="font-display mt-2.5 text-[13px] font-bold text-white">{c.label}</h4>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--muted)]">{c.body}</p>
+                </div>
+              );
+            })}
+          </section>
+
+          {/* Data controls */}
+          <section className="card p-5">
+            <div className="flex items-center gap-2 text-[11px] font-bold tracking-wide text-[var(--dim)] uppercase">
+              <Database className="h-3.5 w-3.5" /> Your data
             </div>
-          </div>
 
+            <div className="mt-3 space-y-2 text-[12px] text-[var(--muted)]">
+              <div className="flex justify-between border-b border-white/[0.06] pb-2">
+                <span>Storage key</span>
+                <span className="font-mono text-[11px] text-white">JavaMaster_AppState_v2</span>
+              </div>
+              <div className="flex justify-between border-b border-white/[0.06] pb-2">
+                <span>Questions mastered</span>
+                <span className="font-bold text-white tabular">{state.completedQuestions.length}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/[0.06] pb-2">
+                <span>Bookmarks</span>
+                <span className="font-bold text-white tabular">{state.savedQuestions.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Mock rounds recorded</span>
+                <span className="font-bold text-white tabular">{state.interviewHistory.length}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Tappable
+                onClick={exportData}
+                className="flex items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] py-2.5 text-xs font-bold text-white"
+              >
+                <Download className="h-4 w-4" /> Export my progress
+              </Tappable>
+              <Tappable
+                onClick={resetProgress}
+                className="flex items-center justify-center gap-2 rounded-xl border border-rose-400/30 bg-rose-400/10 py-2.5 text-xs font-bold text-rose-300"
+              >
+                <Trash2 className="h-4 w-4" /> Erase everything
+              </Tappable>
+            </div>
+          </section>
         </div>
       )}
-
     </div>
   );
 };

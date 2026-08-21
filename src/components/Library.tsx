@@ -1,482 +1,440 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  Bookmark, 
-  CheckCircle2, 
-  ChevronDown, 
-  ChevronUp, 
-  AlertTriangle, 
-  HelpCircle, 
-  Target, 
+import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  AlertTriangle,
+  Bookmark,
+  Check,
+  ChevronDown,
+  HelpCircle,
+  Search,
+  SlidersHorizontal,
   Sparkles,
-  Filter
+  Target,
+  X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { QUESTIONS, CATEGORIES, Question } from '../data/questions';
+import {
+  CATEGORIES,
+  DIFFICULTY_ORDER,
+  QUESTIONS,
+  TRACKS,
+  XP_BY_DIFFICULTY,
+  getCategoryById,
+  getTrackById,
+  getTrackQuestions,
+  type Difficulty,
+  type Question,
+} from '../data/questions';
+import {
+  Badge,
+  Chip,
+  CodeBlock,
+  DifficultyTag,
+  EmptyState,
+  Markdown,
+  Tappable,
+  celebrate,
+} from './ui';
 
 interface LibraryProps {
   selectedCategory: string | null;
   setSelectedCategory: (catId: string | null) => void;
+  selectedTrack: string | null;
+  setSelectedTrack: (trackId: string | null) => void;
 }
 
-export const Library: React.FC<LibraryProps> = ({ selectedCategory, setSelectedCategory }) => {
-  const { state, toggleSaveQuestion, toggleCompleteQuestion } = useApp();
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSavedOnly, setShowSavedOnly] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+export const Library: React.FC<LibraryProps> = ({
+  selectedCategory,
+  setSelectedCategory,
+  selectedTrack,
+  setSelectedTrack,
+}) => {
+  const { isSaved, isCompleted, toggleSaveQuestion, toggleCompleteQuestion, stats } = useApp();
 
-  // Toggle specific answer expansion
-  const toggleExpand = (id: string) => {
-    setExpandedIds(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
+  const [query, setQuery] = useState('');
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [hideMastered, setHideMastered] = useState(false);
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Filter logic
-  const filteredQuestions = useMemo(() => {
-    return QUESTIONS.filter(q => {
-      // Category filter
-      if (selectedCategory && q.categoryId !== selectedCategory) {
-        return false;
-      }
-      
-      // Saved filter
-      if (showSavedOnly && !state.savedQuestions.includes(q.id)) {
-        return false;
-      }
+  const trackIds = useMemo(() => {
+    const t = selectedTrack ? getTrackById(selectedTrack) : undefined;
+    return t ? new Set(getTrackQuestions(t).map((q) => q.id)) : null;
+  }, [selectedTrack]);
 
-      // Search query
-      if (searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase();
-        const matchesTitle = q.title.toLowerCase().includes(query);
-        const matchesTags = q.tags.some(t => t.toLowerCase().includes(query));
-        const matchesQuestion = q.question.toLowerCase().includes(query);
-        const matchesScenario = q.scenario.toLowerCase().includes(query);
-        return matchesTitle || matchesTags || matchesQuestion || matchesScenario;
-      }
-
-      return true;
-    });
-  }, [selectedCategory, showSavedOnly, searchQuery, state.savedQuestions]);
-
-  const getDifficultyColor = (diff: Question['difficulty']) => {
-    switch (diff) {
-      case 'Hard': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-      case 'Expert': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-      case 'Master': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-      default: return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
-    }
-  };
-
-  // Comprehensive markdown renderer for interview answers
-  const renderFormattedText = (text: string) => {
-    // Process inline formatting first
-    const processInlineMarkdown = (str: string): React.ReactNode[] => {
-      const parts: React.ReactNode[] = [];
-      // Match **bold**, `code`, and plain text
-      const regex = /(\*\*.*?\*\*|`[^`]+`)/g;
-      let lastIndex = 0;
-      let match;
-      let key = 0;
-
-      while ((match = regex.exec(str)) !== null) {
-        // Add text before the match
-        if (match.index > lastIndex) {
-          parts.push(<span key={key++}>{str.slice(lastIndex, match.index)}</span>);
-        }
-        
-        const matched = match[0];
-        if (matched.startsWith('**') && matched.endsWith('**')) {
-          // Bold text
-          parts.push(
-            <strong key={key++} className="text-white font-semibold">
-              {matched.slice(2, -2)}
-            </strong>
-          );
-        } else if (matched.startsWith('`') && matched.endsWith('`')) {
-          // Inline code
-          parts.push(
-            <code key={key++} className="px-1.5 py-0.5 bg-slate-800 text-indigo-300 rounded text-[11px] font-mono">
-              {matched.slice(1, -1)}
-            </code>
-          );
-        }
-        
-        lastIndex = match.index + matched.length;
-      }
-
-      // Add remaining text
-      if (lastIndex < str.length) {
-        parts.push(<span key={key++}>{str.slice(lastIndex)}</span>);
-      }
-
-      return parts.length > 0 ? parts : [<span key="0">{str}</span>];
-    };
-
-    // Split by double newlines for paragraphs
-    const blocks = text.split('\n\n');
-    
-    return blocks.map((block, pIdx) => {
-      // Handle ### headings
-      if (block.trim().startsWith('###')) {
-        return (
-          <h5 key={pIdx} className="font-bold text-xs md:text-sm mt-4 mb-2 border-b border-slate-800 pb-1 text-indigo-300">
-            {block.replace(/^###\s*/, '').trim()}
-          </h5>
-        );
-      }
-
-      // Handle headings with single #
-      if (block.trim().startsWith('#') && !block.trim().startsWith('###')) {
-        return (
-          <h5 key={pIdx} className="font-bold text-xs md:text-sm mt-4 mb-2 text-indigo-300">
-            {block.replace(/^#+\s*/, '').trim()}
-          </h5>
-        );
-      }
-
-      // Check if block contains list items (* or -)
-      const lines = block.split('\n');
-      const hasListItems = lines.some(line => /^\s*[\*\-]\s/.test(line));
-      
-      if (hasListItems) {
-        const listItems = lines.filter(line => /^\s*[\*\-]\s/.test(line));
-        const textBefore = lines.filter(line => !/^\s*[\*\-]\s/.test(line) && line.trim().length > 0);
-        
-        return (
-          <div key={pIdx} className="my-2">
-            {textBefore.length > 0 && (
-              <p className="text-xs md:text-sm text-slate-300 leading-relaxed mb-2">
-                {processInlineMarkdown(textBefore.join(' '))}
-              </p>
-            )}
-            <ul className="space-y-1 list-disc list-inside text-slate-300">
-              {listItems.map((line, lIdx) => {
-                const cleanLine = line.replace(/^\s*[\*\-]\s*/, '');
-                return (
-                  <li key={lIdx} className="text-xs md:text-sm leading-relaxed">
-                    {processInlineMarkdown(cleanLine)}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        );
-      }
-
-      // Handle numbered lists
-      const hasNumberedItems = lines.some(line => /^\s*\d+\.\s/.test(line));
-      
-      if (hasNumberedItems) {
-        const listItems = lines.filter(line => /^\s*\d+\.\s/.test(line));
-        const textBefore = lines.filter(line => !/^\s*\d+\.\s/.test(line) && line.trim().length > 0);
-        
-        return (
-          <div key={pIdx} className="my-2">
-            {textBefore.length > 0 && (
-              <p className="text-xs md:text-sm text-slate-300 leading-relaxed mb-2">
-                {processInlineMarkdown(textBefore.join(' '))}
-              </p>
-            )}
-            <ol className="space-y-1 list-decimal list-inside text-slate-300">
-              {listItems.map((line, lIdx) => {
-                const cleanLine = line.replace(/^\s*\d+\.\s*/, '');
-                return (
-                  <li key={lIdx} className="text-xs md:text-sm leading-relaxed">
-                    {processInlineMarkdown(cleanLine)}
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-        );
-      }
-
-      // Default paragraph with line break support
-      const processedText = block.replace(/\n/g, ' ').trim();
-      if (processedText.length === 0) return null;
-      
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return QUESTIONS.filter((item) => {
+      if (selectedCategory && item.categoryId !== selectedCategory) return false;
+      if (trackIds && !trackIds.has(item.id)) return false;
+      if (difficulty && item.difficulty !== difficulty) return false;
+      if (savedOnly && !isSaved(item.id)) return false;
+      if (hideMastered && isCompleted(item.id)) return false;
+      if (!q) return true;
       return (
-        <p key={pIdx} className="text-xs md:text-sm text-slate-300 leading-relaxed my-2">
-          {processInlineMarkdown(processedText)}
-        </p>
+        item.title.toLowerCase().includes(q) ||
+        item.question.toLowerCase().includes(q) ||
+        item.scenario.toLowerCase().includes(q) ||
+        item.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
+  }, [query, selectedCategory, trackIds, difficulty, savedOnly, hideMastered, isSaved, isCompleted]);
+
+  const activeFilters =
+    (selectedCategory ? 1 : 0) + (selectedTrack ? 1 : 0) + (difficulty ? 1 : 0) + (savedOnly ? 1 : 0) + (hideMastered ? 1 : 0);
+
+  const resetAll = () => {
+    setSelectedCategory(null);
+    setSelectedTrack(null);
+    setDifficulty(null);
+    setSavedOnly(false);
+    setHideMastered(false);
+    setQuery('');
   };
 
+  const onMaster = (q: Question) => {
+    const nowComplete = toggleCompleteQuestion(q.id);
+    if (nowComplete) celebrate(q.difficulty === 'Master' || q.difficulty === 'Expert' ? 'big' : 'small');
+  };
+
+  const activeTrack = selectedTrack ? getTrackById(selectedTrack) : undefined;
+
   return (
-    <div className="p-4 md:p-6 space-y-6 fade-in max-w-5xl mx-auto">
-      
-      {/* Search & Header Controls */}
-      <div className="space-y-4">
+    <div className="fade-in mx-auto max-w-5xl space-y-5 p-4 pb-10 md:p-7">
+      {/* ---------------- Header ---------------- */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-            Interview Questions Library
+          <h2 className="font-display text-2xl font-bold text-white md:text-3xl">
+            {activeTrack ? (
+              <span className="flex items-center gap-2">
+                <span aria-hidden>{activeTrack.emoji}</span>
+                {activeTrack.name}
+              </span>
+            ) : selectedCategory ? (
+              <span className="flex items-center gap-2">
+                <span aria-hidden>{getCategoryById(selectedCategory)?.emoji}</span>
+                {getCategoryById(selectedCategory)?.name}
+              </span>
+            ) : (
+              'Question library'
+            )}
           </h2>
-          <p className="text-xs md:text-sm text-slate-400">
-            Showing {filteredQuestions.length} deep-dive questions curated for 5+ YOE developers.
+          <p className="mt-1 text-xs text-[var(--muted)] md:text-sm">
+            {activeTrack?.tagline ??
+              getCategoryById(selectedCategory ?? '')?.description ??
+              `${QUESTIONS.length} deep dives across ${CATEGORIES.length} domains. ${stats.mastered} mastered.`}
           </p>
         </div>
 
-        {/* Search Bar & Saved Toggle */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by keyword, tag, framework (e.g. ZGC, False Sharing, Kafka)..."
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-white"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-
-          <button
-            onClick={() => setShowSavedOnly(!showSavedOnly)}
-            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
-              showSavedOnly 
-                ? 'bg-indigo-600 text-white border-indigo-500' 
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-            }`}
-          >
-            <Bookmark className={`w-3.5 h-3.5 ${showSavedOnly ? 'fill-white' : ''}`} />
-            <span>Bookmarked ({state.savedQuestions.length})</span>
-          </button>
-        </div>
-
-        {/* Category Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 pt-1 no-scrollbar text-xs">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all ${
-              selectedCategory === null
-                ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
-                : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
-            }`}
-          >
-            All Categories
-          </button>
-          
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all ${
-                selectedCategory === cat.id
-                  ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
-                  : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
-              }`}
-            >
-              {cat.name.split(' ')[0]} {cat.name.includes('&') ? '& GC' : ''}
-            </button>
-          ))}
+        <div className="rounded-full border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold text-[var(--muted)] tabular">
+          {results.length} shown
         </div>
       </div>
 
-      {/* Questions Cards List */}
-      <div className="space-y-4">
-        {filteredQuestions.length === 0 ? (
-          <div className="text-center py-12 bg-slate-900/50 rounded-2xl border border-slate-800/80">
-            <Filter className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-            <h4 className="text-sm font-semibold text-slate-300">No questions found</h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-              Try adjusting your search query or clear selected categories.
-            </p>
-            {(selectedCategory || searchQuery || showSavedOnly) && (
-              <button
-                onClick={() => {
-                  setSelectedCategory(null);
-                  setSearchQuery('');
-                  setShowSavedOnly(false);
-                }}
-                className="mt-4 px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors"
-              >
-                Reset All Filters
-              </button>
-            )}
-          </div>
-        ) : (
-          filteredQuestions.map((q) => {
-            const isSaved = state.savedQuestions.includes(q.id);
-            const isCompleted = state.completedQuestions.includes(q.id);
-            const isExpanded = !!expandedIds[q.id];
-            
-            const categoryObj = CATEGORIES.find(c => c.id === q.categoryId);
+      {/* ---------------- Search + filter toggle ---------------- */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[var(--dim)]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="ZGC, virtual threads, N+1, PKCE…"
+            className="w-full rounded-2xl border border-white/[0.09] bg-white/[0.04] py-3 pr-10 pl-10 text-sm text-white placeholder-[var(--dim)] transition-colors outline-none focus:border-[var(--brand-2)]"
+          />
+          {query && (
+            <Tappable
+              onClick={() => setQuery('')}
+              className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-lg p-1.5 text-[var(--dim)] hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </Tappable>
+          )}
+        </div>
+
+        <Tappable
+          onClick={() => setShowFilters((s) => !s)}
+          className={`relative grid w-12 shrink-0 place-items-center rounded-2xl border transition-colors ${
+            showFilters || activeFilters
+              ? 'border-[var(--brand-2)]/50 bg-fuchsia-500/10 text-fuchsia-300'
+              : 'border-white/[0.09] bg-white/[0.04] text-[var(--muted)]'
+          }`}
+          title="Filters"
+        >
+          <SlidersHorizontal className="h-4.5 w-4.5" />
+          {activeFilters > 0 && (
+            <span className="bg-brand absolute -top-1.5 -right-1.5 grid h-5 w-5 place-items-center rounded-full text-[10px] font-black text-white">
+              {activeFilters}
+            </span>
+          )}
+        </Tappable>
+      </div>
+
+      {/* ---------------- Filters ---------------- */}
+      <AnimatePresence initial={false}>
+        {showFilters && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="card space-y-4 p-4">
+              <div>
+                <div className="eyebrow mb-2">Domain</div>
+                <div className="no-scrollbar flex flex-wrap gap-1.5">
+                  <Chip active={!selectedCategory} onClick={() => setSelectedCategory(null)}>
+                    All
+                  </Chip>
+                  {CATEGORIES.map((c) => (
+                    <span key={c.id} data-accent={c.accent}>
+                      <Chip
+                        active={selectedCategory === c.id}
+                        onClick={() => setSelectedCategory(selectedCategory === c.id ? null : c.id)}
+                        title={c.name}
+                      >
+                        <span aria-hidden>{c.emoji}</span> {c.shortName}
+                      </Chip>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="eyebrow mb-2">Difficulty</div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Chip active={!difficulty} onClick={() => setDifficulty(null)}>
+                    Any
+                  </Chip>
+                  {DIFFICULTY_ORDER.map((d) => (
+                    <Tappable
+                      key={d}
+                      onClick={() => setDifficulty(difficulty === d ? null : d)}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-opacity ${
+                        difficulty && difficulty !== d ? 'opacity-45' : ''
+                      }`}
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <DifficultyTag difficulty={d} />
+                    </Tappable>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="eyebrow mb-2">Track</div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Chip active={!selectedTrack} onClick={() => setSelectedTrack(null)}>
+                    None
+                  </Chip>
+                  {TRACKS.map((t) => (
+                    <span key={t.id} data-accent={t.accent}>
+                      <Chip
+                        active={selectedTrack === t.id}
+                        onClick={() => setSelectedTrack(selectedTrack === t.id ? null : t.id)}
+                        title={t.tagline}
+                      >
+                        <span aria-hidden>{t.emoji}</span> {t.name}
+                      </Chip>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 border-t border-white/[0.07] pt-3">
+                <span data-accent="amber">
+                  <Chip active={savedOnly} onClick={() => setSavedOnly((s) => !s)}>
+                    <Bookmark className="mr-0.5 inline h-3 w-3" /> Bookmarked ({stats.saved})
+                  </Chip>
+                </span>
+                <span data-accent="emerald">
+                  <Chip active={hideMastered} onClick={() => setHideMastered((s) => !s)}>
+                    Hide mastered
+                  </Chip>
+                </span>
+                {activeFilters > 0 && (
+                  <Tappable
+                    onClick={resetAll}
+                    className="ml-auto text-[11px] font-bold text-[var(--dim)] hover:text-white"
+                  >
+                    Clear all
+                  </Tappable>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------------- Results ---------------- */}
+      {results.length === 0 ? (
+        <EmptyState
+          emoji={"\u{1F50E}"}
+          title="Nothing matches"
+          body="Try a different keyword, or loosen the filters. There are 136 questions in here somewhere."
+          action={
+            <Tappable
+              onClick={resetAll}
+              className="bg-brand mt-2 rounded-xl px-4 py-2 text-xs font-bold text-white"
+            >
+              Reset filters
+            </Tappable>
+          }
+        />
+      ) : (
+        <div className="space-y-3">
+          {results.map((q) => {
+            const cat = getCategoryById(q.categoryId);
+            const open = !!expanded[q.id];
+            const saved = isSaved(q.id);
+            const done = isCompleted(q.id);
 
             return (
-              <div 
+              <div
                 key={q.id}
-                className={`bg-slate-900 rounded-xl border transition-all overflow-hidden ${
-                  isCompleted 
-                    ? 'border-slate-800/80 bg-slate-900/70' 
-                    : 'border-slate-800 hover:border-slate-700'
-                }`}
+                data-accent={cat?.accent ?? 'violet'}
+                className={`card overflow-hidden transition-colors ${done ? 'border-emerald-500/25' : ''}`}
               >
-                {/* Card Header */}
-                <div className="p-4 md:p-5 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                        {categoryObj?.name || 'Java'}
-                      </span>
-                      <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 rounded border ${getDifficultyColor(q.difficulty)}`}>
-                        {q.difficulty}
-                      </span>
-                    </div>
+                <div className="space-y-3 p-4 md:p-5">
+                  {/* meta row */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge>
+                      <span aria-hidden>{cat?.emoji}</span> {cat?.shortName}
+                    </Badge>
+                    <DifficultyTag difficulty={q.difficulty} />
+                    <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] font-bold text-[var(--dim)] tabular">
+                      +{XP_BY_DIFFICULTY[q.difficulty]} XP
+                    </span>
 
-                    <div className="flex items-center gap-1">
-                      <button
+                    <div className="ml-auto flex items-center gap-1">
+                      <Tappable
                         onClick={() => toggleSaveQuestion(q.id)}
-                        title={isSaved ? "Remove Bookmark" : "Bookmark Question"}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          isSaved ? 'text-amber-400 bg-amber-400/10' : 'text-slate-500 hover:text-slate-300'
+                        title={saved ? 'Remove bookmark' : 'Bookmark'}
+                        className={`rounded-xl p-2 transition-colors ${
+                          saved ? 'bg-amber-400/12 text-amber-300' : 'text-[var(--dim)] hover:text-white'
                         }`}
                       >
-                        <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-amber-400' : ''}`} />
-                      </button>
-                      
-                      <button
-                        onClick={() => toggleCompleteQuestion(q.id)}
-                        title={isCompleted ? "Mark as Unstudied" : "Mark as Mastered"}
-                        className={`p-1.5 rounded-lg flex items-center gap-1 text-xs font-medium transition-colors ${
-                          isCompleted 
-                            ? 'text-emerald-400 bg-emerald-500/10' 
-                            : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
+                        <Bookmark className={`h-4 w-4 ${saved ? 'fill-amber-300' : ''}`} />
+                      </Tappable>
+
+                      <Tappable
+                        onClick={() => onMaster(q)}
+                        className={`flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-[11px] font-bold transition-colors ${
+                          done
+                            ? 'bg-emerald-400/12 text-emerald-300'
+                            : 'text-[var(--dim)] hover:bg-white/[0.06] hover:text-white'
                         }`}
                       >
-                        <CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'fill-emerald-400/20' : ''}`} />
-                        <span className="hidden sm:inline">{isCompleted ? 'Mastered' : 'Mark Mastered'}</span>
-                      </button>
+                        <Check className="h-4 w-4" />
+                        <span className="hidden sm:inline">{done ? 'Mastered' : 'Mark mastered'}</span>
+                      </Tappable>
                     </div>
                   </div>
 
-                  {/* Title & Scenario */}
-                  <div>
-                    <h3 className={`text-base md:text-lg font-bold tracking-tight ${isCompleted ? 'text-slate-300' : 'text-white'}`}>
-                      {q.title}
-                    </h3>
+                  <h3 className="font-display text-[17px] leading-snug font-bold text-white md:text-lg">
+                    {q.title}
+                  </h3>
 
-                    {/* Scenario Box */}
-                    <div className="mt-2.5 p-3 rounded-lg bg-slate-950/50 border border-slate-800/60 text-xs md:text-sm text-slate-400 leading-relaxed">
-                      <strong className="text-slate-300 font-semibold">Scenario: </strong>
-                      {q.scenario}
-                    </div>
-
-                    {/* Question Prompt */}
-                    <div className="mt-3 text-xs md:text-sm text-slate-200 font-medium leading-relaxed">
-                      {q.question}
-                    </div>
+                  <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-3">
+                    <div className="eyebrow mb-1">The situation</div>
+                    <p className="text-[12.5px] leading-relaxed text-[var(--muted)]">{q.scenario}</p>
                   </div>
 
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {q.tags.map(t => (
-                      <span key={t} className="text-[10px] px-2 py-0.5 rounded-md bg-slate-950 text-slate-400 border border-slate-800/80">
+                  <p className="text-[13px] leading-relaxed font-medium text-white md:text-sm">{q.question}</p>
+
+                  <div className="flex flex-wrap gap-1">
+                    {q.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-md border border-white/[0.07] bg-white/[0.03] px-1.5 py-0.5 font-mono text-[10px] text-[var(--dim)]"
+                      >
                         #{t}
                       </span>
                     ))}
                   </div>
 
-                  {/* Expand Answer Button */}
-                  <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                    <button
-                      onClick={() => toggleExpand(q.id)}
-                      className="w-full flex items-center justify-between py-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
-                    >
-                      <span>{isExpanded ? 'Hide Ideal Senior Answer' : 'Reveal Ideal Senior Answer'}</span>
-                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                  </div>
+                  <Tappable
+                    onClick={() => setExpanded((p) => ({ ...p, [q.id]: !p[q.id] }))}
+                    className="flex w-full items-center justify-between rounded-xl border border-[var(--a-line)] bg-[var(--a-soft)] px-3.5 py-2.5 text-xs font-bold text-[var(--a)]"
+                  >
+                    <span>{open ? 'Hide the model answer' : 'Reveal the model answer'}</span>
+                    <motion.span animate={{ rotate: open ? 180 : 0 }}>
+                      <ChevronDown className="h-4 w-4" />
+                    </motion.span>
+                  </Tappable>
                 </div>
 
-                {/* Expanded Section */}
-                {isExpanded && (
-                  <div className="bg-slate-950 p-4 md:p-5 border-t border-slate-800 space-y-5 fade-in">
-                    
-                    {/* Ideal Answer */}
-                    <div>
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Authoritative Answer</span>
-                      </div>
-                      <div className="space-y-1">
-                        {renderFormattedText(q.idealAnswer)}
-                      </div>
-                    </div>
-
-                    {/* Code Snippet if present */}
-                    {q.codeSnippet && (
-                      <div>
-                        <div className="text-xs font-semibold text-slate-400 mb-1">Relevant Code Pattern:</div>
-                        <pre className="bg-slate-900 p-3 rounded-lg border border-slate-800 overflow-x-auto text-xs text-slate-200 font-mono">
-                          <code>{q.codeSnippet}</code>
-                        </pre>
-                      </div>
-                    )}
-
-                    {/* Secondary Insights Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                      
-                      {/* Pitfalls */}
-                      <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>Common Candidate Traps</span>
+                <AnimatePresence initial={false}>
+                  {open && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="space-y-4 border-t border-white/[0.07] bg-black/25 p-4 md:p-5">
+                        <div>
+                          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-[var(--a)] uppercase">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            How a strong candidate answers
+                          </div>
+                          <Markdown text={q.idealAnswer} />
                         </div>
-                        <ul className="space-y-1 text-xs text-slate-300 list-disc list-inside">
-                          {q.pitfalls.map((pf, idx) => (
-                            <li key={idx}>{pf}</li>
-                          ))}
-                        </ul>
-                      </div>
 
-                      {/* Follow-up Questions */}
-                      <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">
-                          <HelpCircle className="w-3.5 h-3.5" />
-                          <span>Interviewer Follow-ups</span>
+                        {q.codeSnippet && <CodeBlock code={q.codeSnippet} label="java" />}
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="rounded-2xl border border-amber-400/15 bg-amber-400/[0.06] p-3.5">
+                            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-amber-300 uppercase">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              Traps to avoid
+                            </div>
+                            <ul className="space-y-1.5">
+                              {q.pitfalls.map((p, i) => (
+                                <li key={i} className="flex gap-2 text-[12px] leading-relaxed text-[var(--muted)]">
+                                  <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/70" />
+                                  {p}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="rounded-2xl border border-sky-400/15 bg-sky-400/[0.06] p-3.5">
+                            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-sky-300 uppercase">
+                              <HelpCircle className="h-3.5 w-3.5" />
+                              They will follow up with
+                            </div>
+                            <ul className="space-y-1.5">
+                              {q.followUpQuestions.map((f, i) => (
+                                <li key={i} className="flex gap-2 text-[12px] leading-relaxed text-[var(--muted)]">
+                                  <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400/70" />
+                                  {f}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
-                        <ul className="space-y-1 text-xs text-slate-300 list-disc list-inside">
-                          {q.followUpQuestions.map((fq, idx) => (
-                            <li key={idx}>{fq}</li>
-                          ))}
-                        </ul>
-                      </div>
 
-                    </div>
-
-                    {/* FAANG Focus */}
-                    <div className="bg-violet-500/5 border border-violet-500/10 rounded-xl p-3 flex gap-2.5 items-start">
-                      <Target className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="text-xs font-bold text-violet-400 uppercase tracking-wider">
-                          Tier-1 Tech Company Focus
+                        <div className="flex gap-2.5 rounded-2xl border border-violet-400/15 bg-violet-400/[0.06] p-3.5">
+                          <Target className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
+                          <div>
+                            <div className="text-[11px] font-bold tracking-wide text-violet-300 uppercase">
+                              Why this gets asked
+                            </div>
+                            <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted)]">{q.faangFocus}</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
-                          {q.faangFocus}
-                        </p>
                       </div>
-                    </div>
-
-                  </div>
-                )}
-
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
-          })
-        )}
-      </div>
-
+          })}
+        </div>
+      )}
     </div>
   );
 };
