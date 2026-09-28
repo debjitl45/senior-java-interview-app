@@ -2,15 +2,24 @@ import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bug, CheckCircle2, Eye, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { CODE_DEFECTS, getCategoryById } from '../data/questions';
+import { CODE_DEFECTS, getCategoryById, type CodeDefect } from '../data/questions';
 import { Badge, Chip, Markdown, Progress, Tappable, celebrate } from './ui';
+
+type Level = 'All' | CodeDefect['difficulty'];
+const LEVELS: Level[] = ['All', 'Core', 'Solid', 'Hard', 'Expert'];
 
 export const DefectAnalyzer: React.FC = () => {
   const { state, markDefectSolved } = useApp();
 
+  const [level, setLevel] = useState<Level>('All');
   const [selectedId, setSelectedId] = useState(CODE_DEFECTS[0].id);
   const [revealed, setRevealed] = useState(false);
   const [tab, setTab] = useState<'broken' | 'fixed'>('broken');
+
+  const visible = useMemo(
+    () => (level === 'All' ? CODE_DEFECTS : CODE_DEFECTS.filter((d) => d.difficulty === level)),
+    [level],
+  );
 
   const defect = useMemo(
     () => CODE_DEFECTS.find((d) => d.id === selectedId) ?? CODE_DEFECTS[0],
@@ -23,6 +32,12 @@ export const DefectAnalyzer: React.FC = () => {
     setSelectedId(id);
     setRevealed(false);
     setTab('broken');
+  };
+
+  const changeLevel = (next: Level) => {
+    setLevel(next);
+    const pool = next === 'All' ? CODE_DEFECTS : CODE_DEFECTS.filter((d) => d.difficulty === next);
+    if (pool.length > 0 && !pool.some((d) => d.id === selectedId)) select(pool[0].id);
   };
 
   const reveal = () => {
@@ -58,9 +73,21 @@ export const DefectAnalyzer: React.FC = () => {
         </div>
       </div>
 
+      {/* Difficulty filter */}
+      <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 md:mx-0 md:px-0">
+        {LEVELS.map((l) => {
+          const count = l === 'All' ? CODE_DEFECTS.length : CODE_DEFECTS.filter((d) => d.difficulty === l).length;
+          return (
+            <Chip key={l} active={level === l} onClick={() => changeLevel(l)}>
+              {l} <span className="ml-1 font-mono text-[10px] opacity-70">{count}</span>
+            </Chip>
+          );
+        })}
+      </div>
+
       {/* Picker */}
       <div className="no-scrollbar edge-fade -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-        {CODE_DEFECTS.map((d, i) => {
+        {visible.map((d, i) => {
           const c = getCategoryById(d.categoryId);
           const solved = state.solvedDefects.includes(d.id);
           return (

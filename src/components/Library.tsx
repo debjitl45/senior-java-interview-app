@@ -17,6 +17,7 @@ import {
   CATEGORIES,
   DIFFICULTY_ORDER,
   QUESTIONS,
+  TOTAL_QUESTIONS,
   TRACKS,
   XP_BY_DIFFICULTY,
   getCategoryById,
@@ -272,7 +273,7 @@ export const Library: React.FC<LibraryProps> = ({
         <EmptyState
           emoji={"\u{1F50E}"}
           title="Nothing matches"
-          body="Try a different keyword, or loosen the filters. There are 136 questions in here somewhere."
+          body={`Try a different keyword, or loosen the filters. There are ${TOTAL_QUESTIONS} questions in here somewhere.`}
           action={
             <Tappable
               onClick={resetAll}

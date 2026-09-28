@@ -13,7 +13,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { CATEGORIES, TRACKS, getTrackQuestions } from '../data/questions';
+import { CATEGORIES, CODE_DEFECTS, TRACKS, getTrackQuestions } from '../data/questions';
 import { iconFor } from '../theme';
 import {
   Badge,
@@ -88,7 +88,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const quickActions = [
     { id: 'interview', label: 'Mock interview', sub: 'Timed, scored, brutal', icon: Mic, accent: 'fuchsia' },
     { id: 'flashcards', label: 'Flashcards', sub: 'Swipe. Recall. Repeat.', icon: Layers, accent: 'cyan' },
-    { id: 'defects', label: 'Spot the bug', sub: '16 cursed snippets', icon: Bug, accent: 'amber' },
+    { id: 'defects', label: 'Spot the bug', sub: `${CODE_DEFECTS.length} cursed snippets`, icon: Bug, accent: 'amber' },
     { id: 'library', label: 'Full library', sub: `${stats.total} deep dives`, icon: Sparkles, accent: 'violet' },
   ] as const;
 
