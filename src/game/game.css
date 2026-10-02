@@ -1,0 +1,214 @@
+/* ============================================================
+   INTERVIEW RPG — styles that only the game uses.
+   Plain CSS (no Tailwind directives) so it can live beside the
+   game code. Layout and spacing stay in Tailwind classes.
+   ============================================================ */
+
+.rpg {
+  --kbc-gold: #f5c542;
+  --kbc-gold-soft: rgba(245, 197, 66, 0.28);
+  --kbc-lock: #f59e0b;
+  --kbc-win: #22c55e;
+  --kbc-lose: #ef4444;
+}
+
+/* ---------- KBC stage ---------- */
+
+.kbc-stage {
+  background:
+    radial-gradient(56rem 26rem at 50% -8%, rgba(91, 33, 182, 0.42), transparent 70%),
+    radial-gradient(40rem 26rem at 50% 115%, rgba(30, 64, 175, 0.36), transparent 70%);
+}
+
+/* The KBC lozenge: an elongated hexagon. A pixel slant keeps the
+   frame and fill parallel at any width. */
+.hex {
+  --slant: 16px;
+  clip-path: polygon(
+    var(--slant) 0,
+    calc(100% - var(--slant)) 0,
+    100% 50%,
+    calc(100% - var(--slant)) 100%,
+    var(--slant) 100%,
+    0 50%
+  );
+}
+
+.hex-frame {
+  padding: 1.5px;
+  background: linear-gradient(90deg, var(--kbc-gold-soft), var(--kbc-gold), var(--kbc-gold-soft));
+  transition: background 0.25s ease, opacity 0.25s ease, filter 0.25s ease;
+}
+
+.hex-fill {
+  background: linear-gradient(180deg, #141d63, #0a1038);
+  transition: background 0.25s ease;
+}
+
+/* The gold rail that runs behind each row of options */
+.kbc-rail {
+  position: relative;
+}
+.kbc-rail::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  top: 50%;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--kbc-gold-soft) 12%, var(--kbc-gold-soft) 88%, transparent);
+  pointer-events: none;
+}
+
+.kbc-option {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.kbc-option:not(:disabled) {
+  cursor: pointer;
+}
+/* Hover only for untouched options, so it never masks the selected colour. */
+.kbc-option[data-state='idle']:not(:disabled):hover .hex-fill {
+  background: linear-gradient(180deg, #1b2a8a, #0f1650);
+}
+.kbc-option:focus-visible {
+  outline: none;
+}
+.kbc-option:focus-visible .hex-frame {
+  filter: drop-shadow(0 0 6px var(--kbc-gold));
+}
+
+.kbc-option[data-state='selected'] .hex-frame,
+.kbc-option[data-state='locked'] .hex-frame {
+  background: linear-gradient(90deg, #fcd34d, var(--kbc-lock), #fcd34d);
+}
+.kbc-option[data-state='selected'] .hex-fill,
+.kbc-option[data-state='locked'] .hex-fill {
+  background: linear-gradient(180deg, #c2410c, #7c2d12);
+}
+.kbc-option[data-state='locked'] .hex-frame {
+  animation: lockPulse 0.7s ease-in-out infinite;
+}
+
+.kbc-option[data-state='correct'] .hex-frame {
+  background: linear-gradient(90deg, #86efac, var(--kbc-win), #86efac);
+  animation: winFlash 0.9s ease-in-out 2;
+}
+.kbc-option[data-state='correct'] .hex-fill {
+  background: linear-gradient(180deg, #15803d, #14532d);
+}
+
+.kbc-option[data-state='wrong'] .hex-frame {
+  background: linear-gradient(90deg, #fca5a5, var(--kbc-lose), #fca5a5);
+}
+.kbc-option[data-state='wrong'] .hex-fill {
+  background: linear-gradient(180deg, #b91c1c, #7f1d1d);
+}
+
+.kbc-option[data-state='removed'] {
+  opacity: 0.18;
+}
+.kbc-option[data-state='dim'] {
+  opacity: 0.55;
+}
+
+@keyframes lockPulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.45); }
+}
+
+@keyframes winFlash {
+  0%, 50%, 100% { filter: brightness(1); }
+  25%, 75%      { filter: brightness(1.7); }
+}
+
+/* ---------- Cold War dossier ---------- */
+
+.dossier {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  background:
+    radial-gradient(40rem 16rem at 0% 0%, rgba(251, 191, 36, 0.07), transparent 60%),
+    linear-gradient(180deg, rgba(23, 19, 12, 0.94), rgba(11, 10, 8, 0.97));
+}
+.dossier,
+.dossier h2,
+.dossier h3 {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.dossier::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px);
+}
+
+.stamp {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 2px solid #ef4444;
+  border-radius: 4px;
+  color: #ef4444;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  transform: rotate(-5deg);
+  opacity: 0.88;
+}
+
+.caret {
+  display: inline-block;
+  width: 0.55em;
+  margin-left: 1px;
+  color: #fbbf24;
+  animation: caretBlink 1s steps(1) infinite;
+}
+.caret::after {
+  content: '▌';
+}
+
+@keyframes caretBlink {
+  50% { opacity: 0; }
+}
+
+/* ---------- Paper letter (offers & rejections) ---------- */
+
+.paper {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.025), transparent 120px),
+    #fbf8f1;
+  color: #1f2937;
+  border-radius: 14px;
+  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.75);
+}
+.paper-muted {
+  color: #6b7280;
+}
+.paper-rule {
+  border-color: rgba(31, 41, 55, 0.12);
+}
+.paper-grey {
+  filter: grayscale(1);
+}
+
+/* ---------- Misc ---------- */
+
+.tilt-in {
+  animation: tiltIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes tiltIn {
+  from { opacity: 0; transform: translateY(14px) rotate(-1.5deg) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.shake {
+  animation: shake 0.45s ease both;
+}
+@keyframes shake {
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}

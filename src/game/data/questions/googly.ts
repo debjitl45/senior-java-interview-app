@@ -1,0 +1,170 @@
+import type { McqQuestion } from '../../types';
+
+/** Product-company loop: DS&A first, then Java internals and design at scale. */
+export const GOOGLY_QUESTIONS: McqQuestion[] = [
+  // ---------------------------------------------------------------- tier 0
+  {
+    id: 'g-0a',
+    tier: 0,
+    q: 'What is the time complexity of searching for a key in a balanced binary search tree with n nodes?',
+    options: ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'],
+    answer: 1,
+    why: 'Each comparison discards half of the remaining tree, and a balanced tree has height ~log n. An unbalanced BST can degrade to O(n) — which is exactly why red-black and AVL trees exist.',
+  },
+  {
+    id: 'g-0b',
+    tier: 0,
+    q: 'Which data structure is the natural fit for checking whether brackets like "{[()]}" are balanced?',
+    options: ['Queue', 'Hash set', 'Stack', 'Binary heap'],
+    answer: 2,
+    why: 'Push every opening bracket; on a closing bracket, pop and check that it matches. The input is balanced if every pop matches and the stack ends empty — O(n) time.',
+  },
+  {
+    id: 'g-0c',
+    tier: 0,
+    q: 'What is the average-case time complexity of get() on a Java HashMap with a good hash function?',
+    options: ['O(1)', 'O(log n)', 'O(n)', 'O(n²)'],
+    answer: 0,
+    why: 'The hash picks the bucket directly and well-spread keys keep buckets tiny. Since Java 8, heavily colliding buckets become red-black trees, so even a bad bucket is O(log n).',
+  },
+  // ---------------------------------------------------------------- tier 1
+  {
+    id: 'g-1a',
+    tier: 1,
+    q: 'You must keep the k largest numbers from a stream of n numbers, using as little memory as possible. Best approach?',
+    options: [
+      'Store everything, sort, take the last k',
+      'A min-heap capped at size k',
+      'A max-heap containing all n numbers',
+      'A HashMap of number → count',
+    ],
+    answer: 1,
+    why: 'Keep a min-heap of size k: if a new number beats the heap’s minimum, swap it in. That is O(n log k) time and O(k) memory, versus O(n log n) time and O(n) memory for sorting.',
+  },
+  {
+    id: 'g-1b',
+    tier: 1,
+    q: 'Which traversal of a binary search tree visits the keys in ascending order?',
+    options: ['Pre-order', 'Post-order', 'Level-order', 'In-order'],
+    answer: 3,
+    why: 'In-order visits left subtree, node, then right subtree. In a BST everything on the left is smaller and everything on the right is larger, so the output comes out sorted.',
+  },
+  {
+    id: 'g-1c',
+    tier: 1,
+    q: 'How do you detect a cycle in a singly linked list using O(1) extra space?',
+    options: [
+      'Store visited nodes in a HashSet',
+      'Count nodes until you reach null',
+      'Floyd’s slow and fast pointers',
+      'Sort the nodes and look for duplicates',
+    ],
+    answer: 2,
+    why: 'Move one pointer one step and another two steps at a time. With a cycle, the fast pointer eventually laps the slow one and they meet. A HashSet also works, but costs O(n) memory — and counting to null never ends.',
+  },
+  // ---------------------------------------------------------------- tier 2
+  {
+    id: 'g-2a',
+    tier: 2,
+    q: 'What is the most efficient way to find the shortest path between two nodes in an unweighted graph?',
+    options: ['Breadth-first search', 'Depth-first search', 'Bellman-Ford', 'Floyd-Warshall'],
+    answer: 0,
+    why: 'BFS explores in layers of distance 1, 2, 3…, so the first time it reaches the target is along a shortest path — O(V + E). Dijkstra works too, but its priority queue is wasted effort when every edge weighs the same.',
+  },
+  {
+    id: 'g-2b',
+    tier: 2,
+    q: 'What is the time complexity of building a binary heap from an unsorted array of n elements using bottom-up heapify?',
+    options: ['O(log n)', 'O(n log n)', 'O(n²)', 'O(n)'],
+    answer: 3,
+    why: 'Most nodes sit near the bottom and sift down only a level or two; summing the heights over all nodes gives O(n). Inserting elements one at a time would be O(n log n) — a classic trick question.',
+  },
+  {
+    id: 'g-2c',
+    tier: 2,
+    q: 'Two threads each run count++ 1,000 times on a shared int field with no synchronization. What will count be?',
+    options: ['Always exactly 2000', 'Always exactly 1000', 'Possibly less than 2000', 'It won’t compile'],
+    answer: 2,
+    why: 'count++ is read-modify-write, not atomic. Both threads can read the same value and write back the same result, losing updates. Use AtomicInteger, LongAdder or synchronized.',
+  },
+  // ---------------------------------------------------------------- tier 3
+  {
+    id: 'g-3a',
+    tier: 3,
+    q: 'You are designing a URL shortener for 100M new links a day. Which ID strategy avoids collisions without a database check on every write?',
+    options: [
+      'Random 6-character strings, retry on collision',
+      'The first 6 characters of the URL’s MD5 hash',
+      'Pre-allocated counter ranges per server, encoded in Base62',
+      'One auto-increment column in a single central database',
+    ],
+    answer: 2,
+    why: 'Each server leases a block of IDs from a coordinator and hands them out locally — unique by construction, no collision checks. Base62 keeps codes short. Random strings and hash prefixes need checks; one central counter becomes the bottleneck.',
+  },
+  {
+    id: 'g-3b',
+    tier: 3,
+    q: 'Which combination gives an LRU cache with O(1) get and put?',
+    options: [
+      'A HashMap plus a doubly linked list',
+      'A sorted array with binary search',
+      'A TreeMap ordered by key',
+      'Two stacks',
+    ],
+    answer: 0,
+    why: 'The map finds a node in O(1); the doubly linked list moves it to the front or evicts the tail in O(1). In Java, LinkedHashMap with accessOrder = true and removeEldestEntry() gives you this out of the box.',
+  },
+  {
+    id: 'g-3c',
+    tier: 3,
+    q: 'Why do distributed caches use consistent hashing instead of hash(key) % N?',
+    options: [
+      'It encrypts keys at rest',
+      'It guarantees strong consistency between replicas',
+      'Adding or removing a node remaps only a small fraction of keys',
+      'It compresses cache values',
+    ],
+    answer: 2,
+    why: 'With % N, changing N reshuffles almost every key and floods the database with misses. On a hash ring only about K/N keys move when a node joins or leaves; virtual nodes keep the load even.',
+  },
+  // ---------------------------------------------------------------- tier 4
+  {
+    id: 'g-4a',
+    tier: 4,
+    q: 'Numbers arrive as a stream. You need O(log n) inserts and the current median in O(1). What do you use?',
+    options: [
+      'A sorted ArrayList with insertion',
+      'A HashMap of value → frequency',
+      'A single queue, re-sorted on demand',
+      'A max-heap for the lower half and a min-heap for the upper half',
+    ],
+    answer: 3,
+    why: 'Keep the halves balanced so their sizes differ by at most one. The median is the top of the larger heap, or the average of both tops. Inserts are O(log n); a sorted list needs O(n) shifting per insert.',
+  },
+  {
+    id: 'g-4b',
+    tier: 4,
+    q: 'What does declaring a field volatile guarantee in the Java Memory Model?',
+    options: [
+      'Visibility and ordering: a write happens-before every later read of that field',
+      'That compound actions like count++ become atomic',
+      'Mutual exclusion, like a lock',
+      'The field is kept in CPU registers only',
+    ],
+    answer: 0,
+    why: 'A volatile write is published to every thread that later reads the field, and it stops reordering across it. It does not make read-modify-write atomic — for that you still need AtomicInteger, a lock or a CAS loop.',
+  },
+  {
+    id: 'g-4c',
+    tier: 4,
+    q: 'p99 latency spikes every few minutes while p50 stays flat. GC logs show multi-second stop-the-world pauses on a 32 GB heap running Parallel GC. Best first move?',
+    options: [
+      'Double the heap to 64 GB',
+      'Call System.gc() every minute',
+      'Move to a low-pause collector such as G1 or ZGC and set a pause goal',
+      'Add more request-handling threads',
+    ],
+    answer: 2,
+    why: 'Parallel GC optimises throughput, not pause time. G1 works toward a pause goal (MaxGCPauseMillis) and ZGC keeps pauses around a millisecond. A bigger heap under Parallel GC just makes each full pause longer.',
+  },
+];

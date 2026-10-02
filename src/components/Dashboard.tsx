@@ -5,9 +5,11 @@ import {
   Bug,
   ChevronRight,
   Flame,
+  Gamepad2,
   Layers,
   Lightbulb,
   Mic,
+  Play,
   Sparkles,
   Target,
   Trophy,
@@ -15,6 +17,9 @@ import {
 import { useApp } from '../context/AppContext';
 import { CATEGORIES, CODE_DEFECTS, TRACKS, getTrackQuestions } from '../data/questions';
 import { iconFor } from '../theme';
+import { COMPANY_IDS } from '../game/types';
+import { CompanyMark } from '../game/kit';
+import { peekSave } from '../game/useGame';
 import {
   Badge,
   Progress,
@@ -29,6 +34,8 @@ interface DashboardProps {
   setActiveTab: (tab: string) => void;
   setSelectedCategory: (categoryId: string | null) => void;
   setSelectedTrack: (trackId: string | null) => void;
+  /** Opens the full-screen interview RPG. */
+  onStartGame: () => void;
 }
 
 const TIPS = [
@@ -54,8 +61,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setActiveTab,
   setSelectedCategory,
   setSelectedTrack,
+  onStartGame,
 }) => {
   const { state, stats, achievements, categoryProgress, acknowledgeLevel } = useApp();
+  // Read on every render so the button reflects progress made in the game overlay.
+  const savedGame = peekSave();
 
   // Celebrate a level-up exactly once, the next time the dashboard is opened.
   useEffect(() => {
@@ -156,6 +166,49 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
           </Tappable>
+        </div>
+      </section>
+
+      {/* ---------------- Interview RPG ---------------- */}
+      <section className="card card-accent relative overflow-hidden p-5 md:p-6" data-accent="amber">
+        <div className="pointer-events-none absolute -top-20 -right-10 h-48 w-48 rounded-full bg-amber-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
+
+        <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2.5">
+            <Badge>
+              <Gamepad2 className="h-3 w-3" /> New · Interview RPG
+            </Badge>
+            <h3 className="font-display text-xl font-bold text-white md:text-2xl">Sachin’s Job Hunt</h3>
+            <p className="max-w-lg text-[13px] leading-relaxed text-[var(--muted)]">
+              Play Sachin, 24, as he interviews at Googly, Tipro, Twiggy and Jha2 Infotech — KBC-style rounds that get
+              harder, office dilemmas in between, and an offer letter (or not) at the end.
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              {COMPANY_IDS.map((id) => (
+                <CompanyMark key={id} id={id} size={28} />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-col items-stretch gap-1.5 md:items-end">
+            <Tappable
+              onClick={onStartGame}
+              className="bg-brand flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/20"
+            >
+              <Play className="h-4 w-4" />
+              {!savedGame
+                ? 'Start Interview Experience'
+                : savedGame.finished
+                  ? 'View your results'
+                  : 'Continue Interview Experience'}
+            </Tappable>
+            {savedGame && !savedGame.finished && (
+              <span className="text-center text-[11px] text-[var(--dim)] md:text-right">
+                {savedGame.completed}/{COMPANY_IDS.length} interviews done · progress saved
+              </span>
+            )}
+          </div>
         </div>
       </section>
 

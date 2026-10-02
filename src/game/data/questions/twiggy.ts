@@ -1,0 +1,190 @@
+import type { McqQuestion } from '../../types';
+
+/** Start-up round: practical backend — HTTP, caching, events, and what breaks at scale. */
+export const TWIGGY_QUESTIONS: McqQuestion[] = [
+  // ---------------------------------------------------------------- tier 0
+  {
+    id: 'w-0a',
+    tier: 0,
+    q: 'Which HTTP method is idempotent and typically used to replace a resource entirely?',
+    options: ['POST', 'PATCH', 'PUT', 'CONNECT'],
+    answer: 2,
+    why: 'Sending the same PUT twice leaves the server in the same state as sending it once. POST creates something new on every call; PATCH applies partial changes and isn’t guaranteed to be idempotent.',
+  },
+  {
+    id: 'w-0b',
+    tier: 0,
+    q: 'A customer places an order and your API creates it successfully. The most appropriate status code?',
+    options: ['201 Created', '200 OK', '204 No Content', '302 Found'],
+    answer: 0,
+    why: '201 Created says a new resource now exists — ideally with a Location header such as /orders/8812. 200 works but says less; 204 means there is no body to return.',
+  },
+  {
+    id: 'w-0c',
+    tier: 0,
+    q: 'Your app gets HTTP 429 from the maps API during the dinner rush. What does it mean?',
+    options: [
+      'The maps server crashed',
+      'Too Many Requests — you’re being rate limited',
+      'Your API key is invalid',
+      'The route was not found',
+    ],
+    answer: 1,
+    why: '429 means you exceeded a rate limit. Respect the Retry-After header, back off exponentially with jitter, and cache what you can. 401/403 are auth problems, 404 is not found, 5xx is a server failure.',
+  },
+  // ---------------------------------------------------------------- tier 1
+  {
+    id: 'w-1a',
+    tier: 1,
+    q: 'Restaurant menus are read 10,000 times a second but change only a few times a day. Best way to cut database load?',
+    options: [
+      'Add more indexes and hope',
+      'Cache menus in Redis with a TTL, and invalidate on update',
+      'Store menus in browser cookies',
+      'Read from the database twice to be safe',
+    ],
+    answer: 1,
+    why: 'Read-heavy and rarely changing is the textbook case for caching. Cache-aside with a TTL plus explicit invalidation when a menu is edited serves nearly every read from memory.',
+  },
+  {
+    id: 'w-1b',
+    tier: 1,
+    q: 'In Spring Boot, what is the recommended way to inject dependencies?',
+    options: [
+      '@Autowired on private fields',
+      'Static setter methods',
+      'Creating beans manually with new',
+      'Constructor injection with final fields',
+    ],
+    answer: 3,
+    why: 'Constructor injection makes dependencies explicit and immutable, fails fast when one is missing, and lets you unit-test with plain new — no Spring context needed. With a single constructor, @Autowired is even optional.',
+  },
+  {
+    id: 'w-1c',
+    tier: 1,
+    q: 'SELECT * FROM orders WHERE user_id = ? takes 4 seconds on a 50M-row table. First thing to try?',
+    options: ['Add an index on user_id', 'Double the server’s RAM', 'Migrate to a NoSQL database', 'Add LIMIT 1000000'],
+    answer: 0,
+    why: 'Without an index the database scans all 50M rows. A B-tree index on user_id turns that into a quick lookup. Confirm with EXPLAIN before and after — and never “fix” a missing index with hardware.',
+  },
+  // ---------------------------------------------------------------- tier 2
+  {
+    id: 'w-2a',
+    tier: 2,
+    q: 'A user double-taps “Pay” and two identical payment requests hit your server. How do you avoid charging twice?',
+    options: [
+      'Tell users not to double-tap',
+      'Add Thread.sleep(2000) before charging',
+      'Send an idempotency key with each payment attempt and dedupe on the server',
+      'Switch the endpoint from POST to GET',
+    ],
+    answer: 2,
+    why: 'The client generates one key per payment attempt; the server stores it and returns the original result for any repeat. Payment gateways use exactly this to survive retries and double taps.',
+  },
+  {
+    id: 'w-2b',
+    tier: 2,
+    q: 'After an order is placed you must notify the restaurant, assign a rider and send an SMS. Why publish an event to Kafka instead of calling all three services synchronously?',
+    options: [
+      'Kafka makes the code shorter',
+      'Consumers work independently, so a slow SMS service can’t block checkout and failures can be retried',
+      'Kafka guarantees zero latency',
+      'Synchronous calls are banned in microservices',
+    ],
+    answer: 1,
+    why: 'Events decouple producer from consumers: checkout returns fast, each consumer scales and retries on its own, and new consumers can be added without touching the order service. The price is eventual consistency.',
+  },
+  {
+    id: 'w-2c',
+    tier: 2,
+    q: 'In JPA/Hibernate, what is the N+1 query problem?',
+    options: [
+      'N users calling the API at the same time',
+      'A database with N+1 replicas',
+      'An index with N+1 columns',
+      'Loading a list with one query, then one more query per item to fetch a lazy relation',
+    ],
+    answer: 3,
+    why: 'Loading 100 orders and then touching order.getItems() in a loop fires 101 queries. Fix it with JOIN FETCH, an @EntityGraph or batch fetching — and turn on SQL logging so you actually notice.',
+  },
+  // ---------------------------------------------------------------- tier 3
+  {
+    id: 'w-3a',
+    tier: 3,
+    q: 'You must enforce 100 requests per minute per user across 20 API servers. Best approach?',
+    options: [
+      'An in-memory counter on each server',
+      'A shared counter in Redis using a token bucket or sliding window with atomic operations',
+      'A JavaScript check in the mobile app',
+      'Grep the access logs every hour',
+    ],
+    answer: 1,
+    why: 'Per-server counters let a user get 20× the limit by hitting different servers. A central store with atomic INCR/EXPIRE or a Lua script gives one consistent count; client-side checks are trivially bypassed.',
+  },
+  {
+    id: 'w-3b',
+    tier: 3,
+    q: 'The rider’s location updates every 3 seconds and must show live in the customer’s app. Most efficient transport at scale?',
+    options: [
+      'Push over WebSockets or Server-Sent Events',
+      'Every app polls a REST endpoint every 3 seconds',
+      'Email',
+      'FTP',
+    ],
+    answer: 0,
+    why: 'A persistent connection lets the server push updates the moment they happen. Polling from millions of phones wastes requests that mostly say “no change”, and still lags by up to a full interval.',
+  },
+  {
+    id: 'w-3c',
+    tier: 3,
+    q: 'A downstream payment service keeps timing out. What does a circuit breaker (e.g. Resilience4j) do?',
+    options: [
+      'Retries forever until it succeeds',
+      'Restarts the downstream service',
+      'Opens: fails fast or serves a fallback for a cool-down, then half-opens to test recovery',
+      'Turns off logging to save resources',
+    ],
+    answer: 2,
+    why: 'Past a failure threshold the breaker stops sending traffic, so your threads aren’t stuck waiting and the sick service gets room to recover. After a wait it lets a few trial calls through (half-open) before closing again.',
+  },
+  // ---------------------------------------------------------------- tier 4
+  {
+    id: 'w-4a',
+    tier: 4,
+    q: 'In a saga, the payment succeeded but no rider can be assigned. What should happen?',
+    options: [
+      'A distributed lock rolls back every service automatically',
+      'Compensating actions run: refund the payment and cancel the order',
+      'The payment database’s own rollback undoes the charge',
+      'Nothing — eventual consistency will fix it',
+    ],
+    answer: 1,
+    why: 'Each saga step commits locally, so there is no global rollback. Every step has a compensating action that semantically undoes it — a refund, not a deleted row — triggered by events or an orchestrator.',
+  },
+  {
+    id: 'w-4b',
+    tier: 4,
+    q: 'A Kafka consumer writes an event to the database, then crashes before committing its offset. What happens on restart, and how do you stay correct?',
+    options: [
+      'The event is lost; nothing can be done',
+      'Kafka guarantees exactly-once delivery into any external database by default',
+      'The partition is deleted and recreated',
+      'The event is delivered again (at-least-once), so make the consumer idempotent',
+    ],
+    answer: 3,
+    why: 'The offset wasn’t committed, so the event is read again. Design for it: dedupe on an event ID, use upserts, or record processed IDs in the same transaction. Kafka’s exactly-once covers Kafka-to-Kafka flows, not your database by default.',
+  },
+  {
+    id: 'w-4c',
+    tier: 4,
+    q: 'Flash sale: 10,000 users try to buy 100 discounted biryanis in one second. How do you prevent overselling?',
+    options: [
+      'Read the stock, check it’s above 0, then update it in a separate statement',
+      'Use a bigger server',
+      'Atomic conditional update: UPDATE stock SET qty = qty - 1 WHERE id = ? AND qty > 0, then check rows affected',
+      'Sell to everyone and cancel the extras later by email',
+    ],
+    answer: 2,
+    why: 'Read-check-write in separate steps is a race: many requests see qty = 1 and all succeed. A single conditional UPDATE (or Redis DECR) makes check-and-decrement atomic — zero rows affected means sold out.',
+  },
+];

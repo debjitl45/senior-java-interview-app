@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { AppProvider } from './context/AppContext';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -7,11 +8,13 @@ import { DefectAnalyzer } from './components/DefectAnalyzer';
 import { Simulator } from './components/Simulator';
 import { Flashcards } from './components/Flashcards';
 import { ComplianceInfo } from './components/ComplianceInfo';
+import { InterviewRPG } from './game/InterviewRPG';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
+  const [gameOpen, setGameOpen] = useState(false);
 
   const content = () => {
     switch (activeTab) {
@@ -39,15 +42,22 @@ const AppContent: React.FC = () => {
             setActiveTab={setActiveTab}
             setSelectedCategory={setSelectedCategory}
             setSelectedTrack={setSelectedTrack}
+            onStartGame={() => setGameOpen(true)}
           />
         );
     }
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {content()}
-    </Layout>
+    <>
+      {/* The game is a full-screen layer; the app underneath stays mounted but inert. */}
+      <div className="h-full" inert={gameOpen}>
+        <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+          {content()}
+        </Layout>
+      </div>
+      <AnimatePresence>{gameOpen && <InterviewRPG onExit={() => setGameOpen(false)} />}</AnimatePresence>
+    </>
   );
 };
 

@@ -1,0 +1,167 @@
+import type { McqQuestion } from '../../types';
+
+/** Service-company round: textbook Java, OOP, SQL and delivery process. */
+export const TIPRO_QUESTIONS: McqQuestion[] = [
+  // ---------------------------------------------------------------- tier 0
+  {
+    id: 't-0a',
+    tier: 0,
+    q: 'Which of these is NOT one of the four pillars of object-oriented programming?',
+    options: ['Encapsulation', 'Compilation', 'Inheritance', 'Polymorphism'],
+    answer: 1,
+    why: 'The four pillars are encapsulation, abstraction, inheritance and polymorphism. Compilation is just how source becomes bytecode — Mr. Srinivasan will not accept it as a fifth pillar.',
+  },
+  {
+    id: 't-0b',
+    tier: 0,
+    q: 'What is the default value of an int instance variable in Java?',
+    options: ['null', '-1', '0', 'It must be initialised or the code won’t compile'],
+    answer: 2,
+    why: 'Fields get default values: 0 for numbers, false for boolean, null for references. Local variables are different — they get no default and must be assigned before use.',
+  },
+  {
+    id: 't-0c',
+    tier: 0,
+    q: 'Which SQL statement removes a table along with its structure?',
+    options: ['DELETE', 'TRUNCATE', 'REMOVE', 'DROP'],
+    answer: 3,
+    why: 'DELETE removes rows (optionally filtered with WHERE), TRUNCATE quickly removes all rows but keeps the table, and DROP removes the table definition itself. REMOVE is not an SQL command.',
+  },
+  // ---------------------------------------------------------------- tier 1
+  {
+    id: 't-1a',
+    tier: 1,
+    q: 'For two String variables in Java, what is the difference between == and .equals()?',
+    options: [
+      '== compares references; .equals() compares contents',
+      'There is no difference',
+      '== compares contents; .equals() compares references',
+      '.equals() only works for numbers',
+    ],
+    answer: 0,
+    why: '== checks whether both variables point to the same object; String.equals() compares the characters. Two strings with the same text can still be different objects, so always use equals() for content.',
+  },
+  {
+    id: 't-1b',
+    tier: 1,
+    q: 'The service-company classic: what are final, finally and finalize()?',
+    options: [
+      'Three keywords that all declare constants',
+      'final restricts change, finally always runs after try/catch, finalize() was a GC callback (now deprecated)',
+      'finally declares constants, final handles exceptions, finalize() closes files',
+      'Aliases of each other since Java 17',
+    ],
+    answer: 1,
+    why: 'final: a variable can’t be reassigned, a method can’t be overridden, a class can’t be extended. finally: a block that runs whether or not an exception is thrown. finalize(): an old GC hook, deprecated since Java 9 — use try-with-resources or Cleaner.',
+  },
+  {
+    id: 't-1c',
+    tier: 1,
+    q: 'In Scrum, who owns and prioritises the product backlog?',
+    options: ['The Scrum Master', 'The most senior developer', 'The client’s CFO', 'The Product Owner'],
+    answer: 3,
+    why: 'The Product Owner orders the backlog by value. The Scrum Master facilitates the process and removes blockers; the developers decide how to build what gets picked.',
+  },
+  // ---------------------------------------------------------------- tier 2
+  {
+    id: 't-2a',
+    tier: 2,
+    q: 'You need to store unique elements and also preserve the order in which they were inserted. Which collection?',
+    options: ['HashSet', 'TreeSet', 'ArrayList', 'LinkedHashSet'],
+    answer: 3,
+    why: 'HashSet keeps no order, TreeSet keeps sorted order, and ArrayList allows duplicates. LinkedHashSet threads a linked list through its entries to remember insertion order.',
+  },
+  {
+    id: 't-2b',
+    tier: 2,
+    q: 'What does this print?',
+    code: 'System.out.println(10 + 20 + "Tipro" + 10 + 20);',
+    options: ['30Tipro30', '1020Tipro1020', '30Tipro1020', 'Compilation error'],
+    answer: 2,
+    why: '+ is evaluated left to right. 10 + 20 is integer addition (30); once a String joins in, every following + is concatenation, so 10 and 20 are appended as text.',
+  },
+  {
+    id: 't-2c',
+    tier: 2,
+    q: 'Two days before UAT, the client asks for a “small” change that touches three modules. What should happen first?',
+    options: [
+      'Raise a change request with an impact analysis of effort, timeline and risk',
+      'Implement it overnight without telling anyone',
+      'Refuse — requirements are frozen',
+      'Skip testing to save time',
+    ],
+    answer: 0,
+    why: 'Scope changes go through change management: assess the impact, agree on the new timeline or cost, and get sign-off. Silent heroics lead to blown deadlines and blame; flat refusal damages the relationship.',
+  },
+  // ---------------------------------------------------------------- tier 3
+  {
+    id: 't-3a',
+    tier: 3,
+    q: 'Which query returns employees earning more than the average salary?',
+    options: [
+      'SELECT * FROM emp WHERE salary > AVG(salary);',
+      'SELECT * FROM emp WHERE salary > (SELECT AVG(salary) FROM emp);',
+      'SELECT * FROM emp HAVING salary > AVG(salary);',
+      'SELECT AVG(salary) FROM emp WHERE salary > salary;',
+    ],
+    answer: 1,
+    why: 'Aggregates aren’t allowed directly in WHERE, because WHERE filters rows before aggregation happens. Computing the average in a subquery first, then comparing, is the standard pattern.',
+  },
+  {
+    id: 't-3b',
+    tier: 3,
+    q: 'A class overrides equals() but not hashCode(). What happens when “equal” objects are added to a HashSet?',
+    options: [
+      'Compilation error',
+      'HashSet throws an IllegalStateException',
+      'Duplicates can be stored, because equal objects land in different buckets',
+      'Everything works perfectly',
+    ],
+    answer: 2,
+    why: 'HashSet finds the bucket with hashCode() first and only then calls equals(). The inherited identity hashCode() sends equal objects to different buckets, so equals() is never consulted. Always override both, from the same fields.',
+  },
+  {
+    id: 't-3c',
+    tier: 3,
+    q: 'What is the simplest thread-safe Singleton in Java that also survives serialization and reflection attacks?',
+    options: [
+      'A lazily created instance without synchronization',
+      'A public constructor with a static counter',
+      'A static method that returns new Singleton() each time',
+      'An enum with a single INSTANCE constant',
+    ],
+    answer: 3,
+    why: 'The JVM guarantees an enum constant is created exactly once, and serialization or reflection can’t make a second copy. The initialization-on-demand holder idiom is the other good option when you need lazy loading.',
+  },
+  // ---------------------------------------------------------------- tier 4
+  {
+    id: 't-4a',
+    tier: 4,
+    q: 'Which transaction isolation level prevents dirty reads but still allows non-repeatable reads?',
+    options: ['READ UNCOMMITTED', 'READ COMMITTED', 'REPEATABLE READ', 'SERIALIZABLE'],
+    answer: 1,
+    why: 'READ COMMITTED only shows committed data, but re-reading the same row within one transaction can return a newer committed value. REPEATABLE READ stops that; SERIALIZABLE also stops phantom rows.',
+  },
+  {
+    id: 't-4b',
+    tier: 4,
+    q: 'What does this print?',
+    code: 'String a = "Tipro";\nString b = "Tip" + "ro";\nString c = new String("Tipro");\nSystem.out.println((a == b) + " " + (a == c));',
+    options: ['true true', 'false false', 'true false', 'false true'],
+    answer: 2,
+    why: '"Tip" + "ro" is a compile-time constant, folded into "Tipro" and interned — the same object as a. new String(...) always creates a fresh object on the heap, so a == c is false.',
+  },
+  {
+    id: 't-4c',
+    tier: 4,
+    q: 'In Java 8+, what does HashMap do when one bucket collects too many colliding keys (8 or more, with a table of at least 64)?',
+    options: [
+      'Throws a ConcurrentModificationException',
+      'Converts that bucket’s linked list into a red-black tree',
+      'Silently drops the oldest entry',
+      'Switches the whole map to a TreeMap',
+    ],
+    answer: 1,
+    why: 'This is treeification (TREEIFY_THRESHOLD = 8, MIN_TREEIFY_CAPACITY = 64). Lookups in that bucket drop from O(n) to O(log n), which also blunts hash-flooding attacks. With a smaller table, it resizes instead.',
+  },
+];
