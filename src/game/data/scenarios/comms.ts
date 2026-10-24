@@ -1,0 +1,122 @@
+import type { Scenario } from '../../types';
+
+/** Communication breakdowns and teams that don't talk to each other. */
+export const COMMS: Scenario[] = [
+  {
+    id: 'api_breach',
+    category: 'comms',
+    codename: 'OPERATION: CONTRACT KILLER',
+    location: 'Production alerts · Wednesday, 2:14 PM',
+    briefing: 'The platform team renamed a field in their API — userId became user_id — without telling anyone. Sachin’s checkout service is throwing errors for every order.',
+    dialogue: [
+      { who: 'karthik', line: 'Oh, we cleaned up the naming in our API this morning. It was in our release notes?' },
+      { who: 'rakesh', line: 'Sachin, orders are failing. What’s the plan?', aside: true },
+    ],
+    prompt: 'Orders are failing right now. What does Sachin do?',
+    choices: [
+      { id: 'ab-fix', tone: 'Diplomatic', verdict: 'best', text: 'Hotfix our client to accept both field names and restore orders now. Then propose API versioning and contract tests with Karthik so breaking changes fail in CI, not in production.', outcome: 'Orders recover in 20 minutes. The contract tests catch two more breaking changes over the next month — one from your own team.', lesson: 'Restore first, then fix the process. Contract tests turn “nobody told us” into a red build.', effects: { reputation: 8, skill: 4, network: 4 } },
+      { id: 'ab-rollback', tone: 'Assertive', verdict: 'okay', text: 'Ask Karthik to roll back his change immediately.', outcome: 'He does, grudgingly. Orders recover — but nothing prevents the next surprise.', lesson: 'Rollbacks fix today. Agreements and tests fix next month.', effects: { reputation: 2, network: -3 } },
+      { id: 'ab-shame', tone: 'Savage', verdict: 'bad', text: 'Post in the 500-person engineering channel: “Platform team broke prod AGAIN \u{1F921}”.', outcome: 'It gets 40 laughing reactions and one very angry platform team. Every request to them now takes twice as long.', lesson: 'Public shaming wins a moment and loses a partner team for a year.', effects: { network: -9, reputation: -4 } },
+      { id: 'ab-patch', tone: 'Passive', verdict: 'bad', text: 'Quietly patch your side and move on.', outcome: 'Orders recover. Two weeks later, the same thing happens with a different field.', lesson: 'Silent fixes hide systemic problems. Raise them so they get fixed upstream.', effects: { sanity: -5 } },
+    ],
+    timeout: { outcome: 'While Sachin hesitates, Rakesh pings the platform team’s director. Now it’s a political incident.', lesson: 'In incidents, the person who proposes a plan first usually shapes the outcome.', effects: { reputation: -5, sanity: -4 } },
+    minWeek: 3,
+  },
+  {
+    id: 'duplicate_effort',
+    category: 'comms',
+    codename: 'OPERATION: TWINS',
+    location: 'Monthly demo day · Auditorium',
+    briefing: 'Sachin’s team demos a new notification service. Ten minutes later, the mobile team demos... a new notification service. Same features. Same name, almost.',
+    dialogue: [
+      { who: 'meera', line: 'Interesting. So we built the same thing twice. Who would like to explain?' },
+      { who: 'rohit', line: '(whispering) Ours is obviously better. Let’s fight.', aside: true },
+    ],
+    prompt: 'The room goes quiet. Sachin raises his hand.',
+    choices: [
+      { id: 'de-merge', tone: 'Strategic', verdict: 'best', text: 'Propose comparing both designs on clear criteria, keeping one, crediting both teams — and starting a shared RFC channel so this doesn’t happen again.', outcome: 'The mobile team’s push delivery is better; your templating is better. You merge the best of both. Meera adopts the RFC channel company-wide.', lesson: 'Duplicated work is a coordination failure, not a competition. Fix the system that allowed it.', effects: { reputation: 7, network: 6, charisma: 2 } },
+      { id: 'de-argue', tone: 'Assertive', verdict: 'okay', text: 'Argue that yours is better — and it is, on paper.', outcome: 'You win the debate. The mobile team resents it and quietly keeps their version running anyway.', lesson: 'Winning the argument isn’t the same as solving the problem.', effects: { reputation: 3, network: -4 } },
+      { id: 'de-both', tone: 'Evasive', verdict: 'bad', text: 'Suggest keeping both — “different use cases”.', outcome: 'Now there are two notification services to maintain, two on-call rotations and one confused product team.', lesson: 'Avoiding a hard call creates permanent costs.', effects: { reputation: -3, sanity: -5 } },
+      { id: 'de-accuse', tone: 'Savage', verdict: 'bad', text: 'Ask if the mobile team copied your design.', outcome: 'They didn’t. They started a month before you. The room goes very cold.', lesson: 'Assume coordination failure before assuming bad intent.', effects: { network: -8, reputation: -3 } },
+    ],
+    timeout: { outcome: 'Nobody speaks up. Both services ship. The duplication becomes permanent.', lesson: 'Silence in the room is how organisational debt gets approved.', effects: { reputation: -3 } },
+    minWeek: 6,
+  },
+  {
+    id: 'timezone_tango',
+    category: 'comms',
+    codename: 'OPERATION: GRAVEYARD SHIFT',
+    location: 'Calendar invite · Recurring daily, 10:30 PM IST',
+    briefing: 'Sam, the US counterpart in Seattle, has scheduled a daily sync at 10:30 PM India time. It has been running for three weeks. Sachin hasn’t slept properly in three weeks.',
+    dialogue: [
+      { who: 'sam', line: 'Hey Sachin! Same time tonight? It’s super convenient for us — right after lunch here.' },
+    ],
+    prompt: 'What does Sachin propose?',
+    choices: [
+      { id: 'tt-async', tone: 'Diplomatic', verdict: 'best', text: 'Propose an async handoff doc each day plus a live overlap twice a week at 8:30 PM IST — and offer to rotate the inconvenient slot fairly.', outcome: 'Sam had no idea it was 10:30 PM for you and is mortified. The handoff doc turns out to be better than the meeting ever was.', lesson: 'Distributed teams need async defaults and fairly shared pain. People usually don’t know until you tell them.', effects: { sanity: 8, reputation: 3, network: 3 } },
+      { id: 'tt-earlyoff', tone: 'Passive', verdict: 'okay', text: 'Keep attending, but log off earlier the next day to compensate.', outcome: 'It helps a little. Your evenings still belong to Seattle.', lesson: 'Compensating quietly is better than nothing, but it isn’t a fix.', effects: { energy: -6, sanity: -2 } },
+      { id: 'tt-endure', tone: 'Passive', verdict: 'bad', text: 'Attend every night. It’s part of the job.', outcome: 'Week four, five, six. Your morning stand-ups become zombie walks.', lesson: 'Unsustainable schedules don’t become sustainable through willpower.', effects: { energy: -12, sanity: -9 } },
+      { id: 'tt-skip', tone: 'Evasive', verdict: 'bad', text: 'Just stop showing up without saying anything.', outcome: 'Sam escalates to Rakesh: “Sachin is unresponsive.” Fair, honestly.', lesson: 'Changing a commitment is fine; disappearing from one isn’t.', effects: { reputation: -8 } },
+    ],
+    timeout: { outcome: 'The 10:30 PM invite renews itself. Forever.', lesson: 'Recurring meetings don’t end on their own.', effects: { sanity: -6, energy: -5 } },
+    minWeek: 4,
+  },
+  {
+    id: 'chinese_whispers',
+    category: 'comms',
+    codename: 'OPERATION: TELEPHONE GAME',
+    location: 'Sprint review · Thursday',
+    briefing: 'The client asked for “export reports as PDF”. After passing through four people, it reached Sachin as “build an in-app PDF editor”. He has spent a week building a PDF editor.',
+    dialogue: [
+      { who: 'shreya', line: 'Wait... why is there a PDF editor? The client just wanted a download button.' },
+    ],
+    prompt: 'A week of work just evaporated. What now?',
+    choices: [
+      { id: 'cw-source', tone: 'Honest', verdict: 'best', text: 'Own the gap: go back to the client through Shreya, confirm the requirement in writing with examples and acceptance criteria, ship the download button by Monday — and keep the editor code for later.', outcome: 'The download button ships in two days. The client is happy, and the team adopts written acceptance criteria for every ticket.', lesson: 'Confirm requirements at the source, in writing, with examples. Telephone games are expensive.', effects: { reputation: 6, charisma: 2, skill: 2 } },
+      { id: 'cw-mvp', tone: 'Strategic', verdict: 'okay', text: 'Ship the editor anyway as a “bonus MVP”.', outcome: 'The client is confused but polite. It adds maintenance cost nobody asked for.', lesson: 'Sunk cost is not a reason to ship something nobody needs.', effects: { skill: 3, reputation: -1 } },
+      { id: 'cw-keepgoing', tone: 'Passive', verdict: 'bad', text: 'Say nothing and keep polishing the editor.', outcome: 'Two more weeks pass. The client escalates about the missing PDF download.', lesson: 'When requirements smell wrong, ask — early.', effects: { reputation: -8, sanity: -5 } },
+      { id: 'cw-blame', tone: 'Savage', verdict: 'bad', text: 'Email everyone: “Product gave me the wrong requirement.”', outcome: 'Shreya forwards the original ticket, which says “PDF export”. Ouch.', lesson: 'Public blame invites public evidence.', effects: { network: -6, reputation: -4 } },
+    ],
+    timeout: { outcome: 'The meeting ends with “let’s discuss offline”. Offline never comes.', lesson: 'Misunderstandings compound while nobody clarifies them.', effects: { reputation: -4 } },
+    minWeek: 5,
+  },
+  {
+    id: 'reply_all',
+    category: 'comms',
+    codename: 'OPERATION: REPLY-ALL APOCALYPSE',
+    location: 'Company-wide distribution list · 12,000 recipients',
+    briefing: 'Someone sent a birthday-cake invite to “All India”. Two hundred people have now replied-all with “Please remove me”, “Stop replying all” and one person’s entire resume.',
+    dialogue: [
+      { who: 'vikram', line: 'Bro, reply with a meme. This is the moment. History will remember you.' },
+    ],
+    prompt: 'Sachin’s inbox is on fire. What does he do?',
+    choices: [
+      { id: 'ra-mute', tone: 'Strategic', verdict: 'best', text: 'Don’t reply. Mute the thread with a mail rule and send one ticket to the IT helpdesk to lock the list.', outcome: 'IT locks the list 20 minutes later. You lost nothing but a few seconds.', lesson: 'In a reply-all storm, every reply — including “stop replying” — makes it worse.', effects: { sanity: 3, reputation: 1 } },
+      { id: 'ra-stop', tone: 'Honest', verdict: 'bad', text: 'Reply-all: “PLEASE STOP REPLYING ALL.”', outcome: 'You become reply number 211. Twelve thousand people now know your name for the wrong reason.', lesson: 'Asking people to stop replying-all is still replying-all.', effects: { reputation: -3 } },
+      { id: 'ra-meme', tone: 'Savage', verdict: 'bad', text: 'Reply-all with a meme.', outcome: 'It goes viral internally. HR sends a polite note about “appropriate use of distribution lists”.', lesson: 'Fame and infamy look identical in a reply-all thread.', effects: { network: 4, reputation: -7 } },
+      { id: 'ra-rage', tone: 'Emotional', verdict: 'bad', text: 'Reply-all: “WHO IS RESPONSIBLE FOR THIS?”', outcome: 'Nobody answers that. Everyone answers you.', lesson: 'Anger in writing travels further than you meant it to.', effects: { reputation: -5, sanity: -2 } },
+    ],
+    timeout: { outcome: 'Sachin watches the storm rage on. His laptop fan sounds like a jet engine.', lesson: 'Sometimes doing nothing is fine — but a mail rule is better.', effects: { sanity: -2 } },
+    minWeek: 2,
+    excludes: ['gone:vikram'],
+  },
+  {
+    id: 'silent_dependency',
+    category: 'comms',
+    codename: 'OPERATION: GHOSTED',
+    location: 'Jira ticket PLAT-2291 · Day 9 of silence',
+    briefing: 'Sachin’s feature needs an endpoint from the platform team. Karthik hasn’t answered in nine days. The launch is in two weeks, and the launch date is on the CEO’s slides.',
+    dialogue: [
+      { who: 'rakesh', line: 'We’re still on track for the launch, right Sachin?' },
+    ],
+    prompt: 'What does Sachin do about the silent dependency?',
+    choices: [
+      { id: 'sd-visible', tone: 'Strategic', verdict: 'best', text: 'Flag it as a dated dependency risk in the weekly status, build against a mock meanwhile, and request a 20-minute sync with Karthik and his manager.', outcome: 'Turns out Karthik’s team never saw the ticket — it was in the wrong queue. The endpoint ships in four days. Launch on track.', lesson: 'Make dependencies visible, with dates, to the people who can unblock them. Keep moving with mocks meanwhile.', effects: { reputation: 6, network: 3 } },
+      { id: 'sd-workaround', tone: 'Assertive', verdict: 'okay', text: 'Build a temporary workaround yourself against the database directly.', outcome: 'It works for launch. It also becomes permanent tech debt that breaks six months later.', lesson: 'Workarounds buy time but often bill you later — with interest.', effects: { skill: 3, energy: -6 } },
+      { id: 'sd-wait', tone: 'Passive', verdict: 'bad', text: 'Keep waiting. They’ll reply eventually.', outcome: 'The launch slips. In the review, the question is “why didn’t you flag this earlier?”', lesson: 'Waiting silently on a blocker makes the blocker yours.', effects: { reputation: -9, sanity: -4 } },
+      { id: 'sd-complain', tone: 'Emotional', verdict: 'bad', text: 'Complain about the platform team to everyone at chai.', outcome: 'Karthik hears about it before he hears about your ticket.', lesson: 'Gossip travels faster than tickets — and it never unblocks anything.', effects: { network: -5 } },
+    ],
+    timeout: { outcome: 'Another week of silence. Then two.', lesson: 'Dependencies don’t resolve on their own.', effects: { reputation: -5 } },
+    minWeek: 7,
+  },
+];

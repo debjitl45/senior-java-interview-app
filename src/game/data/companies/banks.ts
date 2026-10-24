@@ -1,0 +1,193 @@
+import { defineCompany } from './define';
+
+export const JPMOREGAIN = defineCompany({
+  id: 'jpmoregain',
+  name: 'JP Moregain',
+  kind: 'bank',
+  tier: 'A',
+  tagline: 'More gain, less pain. Mostly more gain.',
+  accent: 'amber',
+  brand: { bg: '#1e293b', fg: '#e2e8f0', glyph: 'JM' },
+  location: 'Mumbai · Office-first (5 days)',
+  domain: 'jpmoregain.careers',
+  stats: { wlb: 2, toxicity: 3, pay: 4, growth: 4, security: 4 },
+  culture: [
+    'A tech workforce bigger than most tech companies.',
+    'Five days in office, because the top boss said so.',
+    'Every system has a control, and every control has a control.',
+  ],
+  reviews: [{ stars: 4, text: 'Great learning and stability. Expect governance meetings about governance.', by: 'Software Engineer III' }],
+  vibe: ['Office-first', 'Controls', 'Stable'],
+  interviewer: {
+    name: 'Anand Bhattacharya',
+    title: 'Vice President · Payments Tech',
+    avatar: '\u{1F468}\u{1F3FD}‍\u{1F4BC}',
+    intro: 'Good morning. We move enormous sums every day. I will be asking about correctness, Sachin. Not cleverness.',
+    quirks: ['Correct answers settle the same day. Wrong ones settle never.', 'Please note: this interview is recorded for quality and compliance purposes.'],
+  },
+  ctc: [24, 38],
+  payNote: '+ annual bonus',
+  topics: { finance: 4, java: 3, db: 2 },
+  epilogue:
+    'Sachin joins JP Moregain’s payments tech team and learns that one misplaced decimal can make the news. He commutes five days a week, wears formals on Mondays, and his relatives finally stop asking when he’ll get “a proper bank job”.',
+});
+
+export const GOLDMINE = defineCompany({
+  id: 'goldmine',
+  name: 'Goldmine Sacks',
+  kind: 'bank',
+  tier: 'S',
+  tagline: 'We don’t sleep. Neither does our compliance team.',
+  accent: 'amber',
+  brand: { bg: '#78350f', fg: '#fcd34d', glyph: 'GS' },
+  location: 'Bengaluru · Office-first',
+  domain: 'goldminesacks.careers',
+  stats: { wlb: 1, toxicity: 4, pay: 5, growth: 5, security: 3 },
+  culture: [
+    'Brilliant colleagues who answer emails at 1 AM.',
+    'Strats, quants and engineers — everyone is the smartest person in the room.',
+    'Bonus season is treated like a religious festival.',
+  ],
+  reviews: [{ stars: 3, text: 'I learned more in two years than most do in ten. I also aged ten years.', by: 'Associate' }],
+  vibe: ['Elite', '1 AM emails', 'Bonus season'],
+  interviewer: {
+    name: 'Tara Mehta',
+    title: 'Vice President · Securities Engineering',
+    avatar: '\u{1F469}\u{1F3FD}‍\u{1F4BC}',
+    intro: 'Hello Sachin. Our interviews are hard because our systems are unforgiving. Shall we begin?',
+    quirks: ['Hm. A trader would have hung up by now.', 'Good. That answer would survive a market crash.'],
+  },
+  ctc: [34, 52],
+  payNote: '+ performance bonus',
+  topics: { finance: 4, java: 3, concurrency: 3, dsa: 2 },
+  epilogue:
+    'Sachin joins Goldmine Sacks. The work is relentless, the colleagues are scary-smart, and his first bonus pays for his parents’ new kitchen. He learns to sleep in four-hour blocks and to never, ever reply-all.',
+});
+
+export const MORTGAGE = defineCompany({
+  id: 'mortgage',
+  name: 'Mortgage Stanley',
+  kind: 'bank',
+  tier: 'A',
+  tagline: 'Building wealth since before the internet. Approving your PR since never.',
+  accent: 'indigo',
+  brand: { bg: '#0c4a6e', fg: '#e0f2fe', glyph: 'MS' },
+  location: 'Mumbai · Hybrid',
+  domain: 'mortgagestanley.careers',
+  stats: { wlb: 3, toxicity: 3, pay: 4, growth: 4, security: 4 },
+  culture: [
+    'Wealth-management tech: calm on the surface, spreadsheets underneath.',
+    'Every change goes through a change-advisory board.',
+    'Strong training programmes and long tenures.',
+  ],
+  reviews: [{ stars: 4, text: 'Professional, structured, decent balance. Releases need more signatures than a property deal.', by: 'Associate' }],
+  vibe: ['Wealth', 'Change boards', 'Formals'],
+  interviewer: {
+    name: 'Kevin Pinto',
+    title: 'Executive Director · Wealth Tech',
+    avatar: '\u{1F9D1}\u{1F3FD}‍\u{1F4BC}',
+    intro: 'Welcome, Sachin. Our clients trust us with their life savings. My questions are designed accordingly.',
+    quirks: ['Let me put that through the change board. Approved. Next.', 'Interest compounds, and so do bugs.'],
+  },
+  ctc: [24, 36],
+  payNote: '+ bonus',
+  topics: { finance: 3, java: 3, db: 3, design: 1 },
+  epilogue:
+    'Sachin joins Mortgage Stanley’s wealth-tech team. Releases take three approvals and a ceremonial sign-off, but the work-life balance is real and he finally starts his own SIP — in the very app he helps build.',
+});
+
+export const KITTIBANK = defineCompany({
+  id: 'kittibank',
+  name: 'KittiBank',
+  kind: 'bank',
+  tier: 'A',
+  tagline: 'The bank that never sleeps. It naps. Purrfectly.',
+  accent: 'sky',
+  brand: { bg: '#0284c7', fg: '#ffffff', glyph: '\u{1F431}' },
+  location: 'Pune · Hybrid',
+  domain: 'kittibank.careers',
+  stats: { wlb: 3, toxicity: 3, pay: 4, growth: 3, security: 3 },
+  culture: [
+    'A global bank with a giant tech centre in Pune.',
+    'Re-orgs, re-platforms and re-re-orgs.',
+    'Great learning on cards, payments and compliance at scale.',
+  ],
+  reviews: [{ stars: 3, text: 'Solid pay and global exposure. The org chart changes faster than our deploys.', by: 'Assistant VP' }],
+  vibe: ['Global', 'Cards', 'Re-orgs'],
+  interviewer: {
+    name: 'Farah Siddiqui',
+    title: 'AVP · Cards Platform',
+    avatar: '\u{1F469}\u{1F3FD}‍\u{1F4BB}',
+    intro: 'Hi Sachin! We process millions of card swipes a day. Purr-fect answers only, please.',
+    quirks: ['Meow. I mean — correct.', 'That answer just got declined like a card at a petrol pump.'],
+  },
+  ctc: [22, 34],
+  payNote: '+ bonus',
+  topics: { finance: 3, java: 3, db: 2, web: 2 },
+  epilogue:
+    'Sachin joins KittiBank’s card platform team. He learns how one card swipe touches eleven systems in two seconds, survives two re-orgs in his first year, and gets very good at explaining chargebacks at family weddings.',
+});
+
+export const BARCLAZE = defineCompany({
+  id: 'barclaze',
+  name: 'Barclaze',
+  kind: 'bank',
+  tier: 'A',
+  tagline: 'Banking with a British accent and a Pune address.',
+  accent: 'cyan',
+  brand: { bg: '#00aeef', fg: '#ffffff', glyph: 'B' },
+  location: 'Pune · Hybrid',
+  domain: 'barclaze.careers',
+  stats: { wlb: 4, toxicity: 2, pay: 4, growth: 3, security: 4 },
+  culture: [
+    'British politeness in every email: “With respect, kindly note this is a disaster.”',
+    'A huge campus, good food, sensible hours.',
+    'Risk and controls are taken very seriously.',
+  ],
+  reviews: [{ stars: 4, text: 'Good balance, polite people, slow decisions. Brilliant if you like stability.', by: 'Assistant VP' }],
+  vibe: ['Polite', 'Campus', 'Controls'],
+  interviewer: {
+    name: 'Oliver D’Mello',
+    title: 'Vice President · Payments',
+    avatar: '\u{1F9D1}\u{1F3FD}‍\u{1F4BC}',
+    intro: 'Lovely to meet you, Sachin. Cup of tea? Splendid. Let’s have a little chat about payments.',
+    quirks: ['Brilliant. Absolutely brilliant.', 'Hmm. That would be… rather unfortunate in production.'],
+  },
+  ctc: [22, 32],
+  payNote: '+ bonus',
+  topics: { finance: 3, java: 3, db: 2, process: 2 },
+  epilogue:
+    'Sachin joins Barclaze. The campus is huge, the meetings end on time, and he picks up the habit of writing “Kindly” in every email. His payments code runs quietly and correctly — the highest compliment a bank can pay.',
+});
+
+export const WELLSCARGO = defineCompany({
+  id: 'wellscargo',
+  name: 'Wells Cargo',
+  kind: 'bank',
+  tier: 'A',
+  tagline: 'Moving money like cargo since the stagecoach days.',
+  accent: 'rose',
+  brand: { bg: '#b91c1c', fg: '#fcd34d', glyph: '\u{1F69A}' },
+  location: 'Hyderabad · Hybrid',
+  domain: 'wellscargo.careers',
+  stats: { wlb: 4, toxicity: 2, pay: 3, growth: 3, security: 4 },
+  culture: [
+    'A stagecoach-era brand in the middle of a cloud migration.',
+    'Enormous compliance programmes and ethics training.',
+    'Friendly teams, predictable hours.',
+  ],
+  reviews: [{ stars: 4, text: 'Calm, stable, good benefits. Every change ticket asks “Is this ethical?” — and honestly, fair.', by: 'Lead Software Engineer' }],
+  vibe: ['Stagecoach', 'Compliance', 'Calm'],
+  interviewer: {
+    name: 'Kavitha Rao',
+    title: 'Senior Manager · Digital Banking',
+    avatar: '\u{1F469}\u{1F3FD}‍\u{1F3EB}',
+    intro: 'Hello Sachin. We take ethics and correctness very seriously here. Let’s see how you handle both.',
+    quirks: ['Our logo is older than your code. Next question.', 'Good. That passes the ethics check.'],
+  },
+  ctc: [20, 30],
+  payNote: '+ bonus',
+  topics: { finance: 3, java: 3, db: 2, cloud: 2 },
+  epilogue:
+    'Sachin joins Wells Cargo’s digital banking team and helps move a stagecoach-era bank to the cloud. The hours are humane, the compliance training is endless, and he becomes oddly passionate about audit trails.',
+});

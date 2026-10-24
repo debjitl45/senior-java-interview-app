@@ -17,7 +17,10 @@ import {
 import { useApp } from '../context/AppContext';
 import { CATEGORIES, CODE_DEFECTS, TRACKS, getTrackQuestions } from '../data/questions';
 import { iconFor } from '../theme';
-import { COMPANY_IDS } from '../game/types';
+import { COMPANY_IDS } from '../game/data/companies';
+import { SCENARIOS } from '../game/data/scenarios';
+import { ENDING_IDS } from '../game/data/endings';
+import { SEASON_WEEKS } from '../game/engine';
 import { CompanyMark } from '../game/kit';
 import { peekSave } from '../game/useGame';
 import {
@@ -177,17 +180,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2.5">
             <Badge>
-              <Gamepad2 className="h-3 w-3" /> New · Interview RPG
+              <Gamepad2 className="h-3 w-3" /> Season 2 · Interview RPG
             </Badge>
             <h3 className="font-display text-xl font-bold text-white md:text-2xl">Sachin’s Job Hunt</h3>
             <p className="max-w-lg text-[13px] leading-relaxed text-[var(--muted)]">
-              Play Sachin, 24, as he interviews at Googly, Tipro, Twiggy and Jha2 Infotech — KBC-style rounds that get
-              harder, office dilemmas in between, and an offer letter (or not) at the end.
+              Play Sachin, 24, through a {SEASON_WEEKS}-week job hunt: {COMPANY_IDS.length} companies from Macrosoft to Jha2 Infotech,
+              KBC-style interviews that change his stats, {SCENARIOS.length} office dilemmas and {ENDING_IDS.length} endings.
             </p>
-            <div className="flex items-center gap-2 pt-1">
-              {COMPANY_IDS.map((id) => (
-                <CompanyMark key={id} id={id} size={28} />
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              {COMPANY_IDS.slice(0, 9).map((id) => (
+                <CompanyMark key={id} id={id} size={26} />
               ))}
+              <span className="grid h-[26px] place-items-center rounded-[28%] bg-white/[0.06] px-1.5 text-[10px] font-bold text-[var(--dim)]">
+                +{COMPANY_IDS.length - 9}
+              </span>
             </div>
           </div>
 
@@ -200,12 +206,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {!savedGame
                 ? 'Start Interview Experience'
                 : savedGame.finished
-                  ? 'View your results'
+                  ? 'See how it ended'
                   : 'Continue Interview Experience'}
             </Tappable>
             {savedGame && !savedGame.finished && (
               <span className="text-center text-[11px] text-[var(--dim)] md:text-right">
-                {savedGame.completed}/{COMPANY_IDS.length} interviews done · progress saved
+                Week {Math.min(savedGame.week, SEASON_WEEKS)} of {SEASON_WEEKS} · progress saved
               </span>
             )}
           </div>

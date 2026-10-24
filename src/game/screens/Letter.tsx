@@ -2,26 +2,30 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import type { CompanyId } from '../types';
 import { getCompany } from '../data/companies';
-import { PASS_MARK, ROUND_LENGTH, packageFor } from '../engine';
+import { PASS_MARK, ROUND_LENGTH, formatPkg } from '../engine';
 import { CompanyWordmark } from '../kit';
 
-const today = () =>
-  new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+const today = () => new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 
 /** The offer or rejection letter, rendered as a sheet of paper. */
-export const Letter: React.FC<{ company: CompanyId; correct: number }> = ({ company, correct }) => {
+export const Letter: React.FC<{
+  company: CompanyId;
+  offer: boolean;
+  correct: number;
+  pkg?: number;
+  negotiated?: 'won' | 'lost';
+}> = ({ company, offer, correct, pkg, negotiated }) => {
   const co = getCompany(company);
-  const offer = correct >= PASS_MARK;
   const body = offer ? co.offer.body : co.rejection.body;
 
   return (
     <article className="paper tilt-in relative overflow-hidden p-5 md:p-8">
       <div className="flex items-start justify-between gap-3 border-b paper-rule pb-4">
-        <div>
+        <div className="min-w-0">
           <CompanyWordmark id={company} onPaper className="text-2xl md:text-3xl" />
           <div className="paper-muted mt-1 text-[11px]">{co.location}</div>
         </div>
-        <div className="paper-muted text-right text-[11px] leading-relaxed">
+        <div className="paper-muted shrink-0 text-right text-[11px] leading-relaxed">
           <div>{today()}</div>
           <div>To: Sachin</div>
         </div>
@@ -37,26 +41,29 @@ export const Letter: React.FC<{ company: CompanyId; correct: number }> = ({ comp
         ))}
       </div>
 
-      {offer ? (
+      {offer && pkg !== undefined ? (
         <>
           <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 rounded-xl border paper-rule bg-white/70 p-4 text-[13px] sm:grid-cols-2">
             <div>
-              <dt className="paper-muted text-[11px] font-semibold uppercase tracking-wide">Role</dt>
+              <dt className="paper-muted text-[11px] font-semibold tracking-wide uppercase">Role</dt>
               <dd className="font-semibold">{co.offer.role}</dd>
             </div>
             <div>
-              <dt className="paper-muted text-[11px] font-semibold uppercase tracking-wide">Package</dt>
-              <dd className="text-lg font-black text-emerald-700">{packageFor(company, correct)}</dd>
+              <dt className="paper-muted text-[11px] font-semibold tracking-wide uppercase">Package</dt>
+              <dd className="text-lg font-black text-emerald-700">
+                {formatPkg(co, pkg)} {co.payNote && <span className="text-[12px] font-semibold text-emerald-800/80">{co.payNote}</span>}
+              </dd>
+              {negotiated === 'won' && <dd className="text-[11px] font-semibold text-emerald-700">Revised after negotiation</dd>}
             </div>
             <div>
-              <dt className="paper-muted text-[11px] font-semibold uppercase tracking-wide">Interview score</dt>
+              <dt className="paper-muted text-[11px] font-semibold tracking-wide uppercase">Interview score</dt>
               <dd className="font-semibold">
                 {correct}/{ROUND_LENGTH}
               </dd>
             </div>
             <div>
-              <dt className="paper-muted text-[11px] font-semibold uppercase tracking-wide">Joining</dt>
-              <dd className="font-semibold">As per mutual agreement</dd>
+              <dt className="paper-muted text-[11px] font-semibold tracking-wide uppercase">Joining</dt>
+              <dd className="font-semibold">After your notice period</dd>
             </div>
           </dl>
 
@@ -81,11 +88,7 @@ export const Letter: React.FC<{ company: CompanyId; correct: number }> = ({ comp
           <div className="paper-muted text-[11px]">Regards,</div>
           <div className="font-semibold">{offer ? co.offer.signoff : co.rejection.signoff}</div>
         </div>
-        <span
-          className="stamp text-xs md:text-sm"
-          style={offer ? { color: '#15803d', borderColor: '#15803d' } : undefined}
-          aria-hidden
-        >
+        <span className="stamp text-xs md:text-sm" style={offer ? { color: '#15803d', borderColor: '#15803d' } : undefined} aria-hidden>
           {offer ? 'OFFER' : 'REJECTED'}
         </span>
       </div>

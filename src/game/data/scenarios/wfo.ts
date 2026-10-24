@@ -1,0 +1,108 @@
+import type { Scenario } from '../../types';
+
+/** The 3-day work-from-office policy, from announcement to aftermath. */
+export const WFO: Scenario[] = [
+  {
+    id: 'wfo_mandate',
+    category: 'wfo',
+    codename: 'OPERATION: RETURN TO DESK',
+    location: 'All-hands · Auditorium + 900 people on the call',
+    briefing: 'Big announcement: from next month, everyone works from office three days a week, tracked by badge swipes. Sachin’s commute is 75 minutes each way in Bengaluru traffic.',
+    dialogue: [
+      { who: 'meera', line: 'Collaboration happens in person. Three days a week, starting next month. Badge data will be reviewed monthly.' },
+      { who: 'vikram', line: '(chat) 75 minutes each way. That’s 7.5 hours a week in a cab. RIP.', aside: true },
+    ],
+    prompt: 'The anonymous Q&A is open. What does Sachin do?',
+    choices: [
+      { id: 'wm-questions', tone: 'Strategic', verdict: 'best', text: 'Ask the useful questions: which days are the team’s anchor days, can hours flex around traffic, and is there commute support? Then plan office days around team overlap.', outcome: 'Meera answers: anchor days per team, flexible hours, and a shuttle pilot. Your questions get the most upvotes. You plan Tue–Thu with the team.', lesson: 'When a policy is decided, focus on the levers you can still influence.', effects: { reputation: 3, sanity: 2 }, setFlags: ['wfo'] },
+      { id: 'wm-exception', tone: 'Honest', verdict: 'okay', text: 'Ask whether there are exceptions for long commutes.', outcome: 'The answer is “case by case, talk to your manager”. Not nothing.', lesson: 'Asking about exceptions is fair — have your specific case ready.', effects: { sanity: 1 }, setFlags: ['wfo'] },
+      { id: 'wm-accept', tone: 'Passive', verdict: 'okay', text: 'Accept it silently and adjust.', outcome: 'You adjust. The commute eats into your evenings.', lesson: 'Sometimes you just adapt — but you lost a chance to shape the details.', effects: { sanity: -4 }, setFlags: ['wfo'] },
+      { id: 'wm-rant', tone: 'Emotional', verdict: 'bad', text: 'Post in the “anonymous” Q&A: “This is modern slavery.”', outcome: 'It is not as anonymous as advertised. Rakesh gets a quiet call about “team sentiment”.', lesson: 'Assume nothing at work is truly anonymous. Criticise policies constructively.', effects: { reputation: -6 }, setFlags: ['wfo'] },
+    ],
+    timeout: { outcome: 'The Q&A closes. The policy is now just a fact of life.', lesson: 'Feedback windows close fast.', effects: { sanity: -3 }, setFlags: ['wfo'] },
+    forcedWeek: 6,
+    minWeek: 6,
+    excludes: ['wfo'],
+  },
+  {
+    id: 'badge_big_brother',
+    category: 'wfo',
+    codename: 'OPERATION: SWIPE RIGHT',
+    location: 'Inbox · “Attendance compliance — action required”',
+    briefing: 'HR’s automated report says Sachin badged in only two days last week. Meanwhile, half the floor has discovered “coffee badging”: swipe in, grab a coffee, leave.',
+    dialogue: [
+      { who: 'pooja', line: '(email) Your attendance last week: 2/3 days. Please ensure compliance with the hybrid policy.' },
+      { who: 'rohit', line: 'Bro, just swipe in at 9, coffee, home by 10. Everyone does it.', aside: true },
+    ],
+    prompt: 'What does Sachin do?',
+    choices: [
+      { id: 'bb-explain', tone: 'Honest', verdict: 'best', text: 'Reply with the reason — Rakesh approved a WFH day for a client deadline — copy Rakesh to confirm, and commit to the team’s anchor days going forward.', outcome: 'Rakesh confirms. Pooja marks it as an approved exception. Clean record, no drama.', lesson: 'When a system flags you, answer with facts and get the approver to confirm in writing.', effects: { reputation: 3, sanity: 2 } },
+      { id: 'bb-anchor', tone: 'Strategic', verdict: 'okay', text: 'Ignore the email but plan all future office days on the team’s anchor days.', outcome: 'The flags stop. The first one stays on record, unexplained.', lesson: 'Fixing the behaviour is good; leaving the flag unanswered can resurface later.', effects: { reputation: 1 } },
+      { id: 'bb-coffee', tone: 'Evasive', verdict: 'bad', text: 'Start coffee badging: swipe in, coffee, leave.', outcome: 'A random audit compares badge-ins with laptop network logs. Your name is on the list.', lesson: 'Gaming a metric usually gets noticed — and then it’s an integrity problem, not an attendance one.', effects: { reputation: -10 } },
+      { id: 'bb-proxy', tone: 'Savage', verdict: 'bad', text: 'Ask a friend to swipe your badge for you.', outcome: 'That’s proxy attendance — a policy violation for both of you. The friend is very unhappy with you.', lesson: 'Never ask someone else to break a rule for you.', effects: { reputation: -15, network: -4 } },
+    ],
+    timeout: { outcome: 'The email sits unanswered. A second, sterner one arrives.', lesson: 'Compliance emails don’t expire; they escalate.', effects: { reputation: -3 } },
+    requires: ['wfo'],
+    minWeek: 8,
+  },
+  {
+    id: 'empty_office',
+    category: 'wfo',
+    codename: 'OPERATION: GHOST TOWN',
+    location: 'Floor 4 · 10:30 AM · 3 people in a room for 120',
+    briefing: 'Sachin spent 75 minutes in traffic. His whole team is “WFH today”. He spends the day in a phone booth, on video calls with people sitting at home.',
+    dialogue: [
+      { who: 'ananya', line: '(on video) Oh, you went in today? We all thought it was Wednesday-Thursday-Friday.' },
+    ],
+    prompt: 'Sachin is alone in a 120-seat office. What now?',
+    choices: [
+      { id: 'eo-anchor', tone: 'Strategic', verdict: 'best', text: 'Propose team anchor days in the retro: the same three days for everyone, meetings bunched on those days, deep work on WFH days.', outcome: 'The team adopts it. Office days become collaborative and lively; home days become productive. Meera borrows the idea for other teams.', lesson: 'Hybrid only works with coordination. Agree on the same days — and make them worth the commute.', effects: { reputation: 4, network: 4, sanity: 4 } },
+      { id: 'eo-network', tone: 'Diplomatic', verdict: 'okay', text: 'Make the most of it: have lunch with people from other teams who are in.', outcome: 'You meet two people from the platform team. One of them later unblocks a dependency for you in a day.', lesson: 'An empty office is still a networking opportunity.', effects: { network: 4 } },
+      { id: 'eo-complain', tone: 'Emotional', verdict: 'bad', text: 'Complain loudly in the team channel.', outcome: 'Valid frustration, wrong channel. People get defensive, and nothing changes.', lesson: 'Venting creates heat; proposals create change.', effects: { reputation: -3 } },
+      { id: 'eo-leave', tone: 'Evasive', verdict: 'bad', text: 'Go home after an hour but leave your status as “in office”.', outcome: 'Your manager calls the office desk phone. Awkward.', lesson: 'Small dishonesty about attendance costs more trust than the attendance itself.', effects: { reputation: -6 } },
+    ],
+    timeout: { outcome: 'Sachin does his calls from the booth and goes home. Tomorrow, repeat.', lesson: 'Problems that nobody raises become routines.', effects: { sanity: -4 } },
+    requires: ['wfo'],
+    minWeek: 9,
+  },
+  {
+    id: 'wfo_exception',
+    category: 'wfo',
+    codename: 'OPERATION: HOME FRONT',
+    location: 'Phone call from home · 7:40 AM',
+    briefing: 'Sachin’s father had surgery back home and needs someone around for two months. The office policy lists no exceptions. Sachin has eight days of leave left.',
+    dialogue: [
+      { who: 'rakesh', line: 'Sorry to hear about your father, Sachin. But you know the policy... three days a week.' },
+    ],
+    prompt: 'Family or policy — or both?',
+    choices: [
+      { id: 'we-ask', tone: 'Honest', verdict: 'best', text: 'Write to Rakesh and Pooja with the situation and a concrete plan: two months remote, overlap hours, weekly deliverables, a return date — and request a temporary exception.', outcome: 'With a clear plan in writing, HR approves a temporary exception within a day. You take care of your father and still ship your work.', lesson: 'Policies usually have room for genuine situations — especially when you bring a plan, not just a problem.', effects: { sanity: 8, reputation: 2 } },
+      { id: 'we-leave', tone: 'Strategic', verdict: 'okay', text: 'Burn all your leave and work from home on the WFH days without telling anyone you’ve left the city.', outcome: 'It mostly works, but you are exhausted and anxious about being found out.', lesson: 'Working around a policy quietly costs sanity. Ask first.', effects: { energy: -10, sanity: -4 } },
+      { id: 'we-fake', tone: 'Evasive', verdict: 'bad', text: 'Ask a friend to badge you in while you’re away.', outcome: 'Found out in the monthly audit. Now it’s a disciplinary matter at the worst possible time.', lesson: 'Never solve a real problem with a fake one.', effects: { reputation: -15 } },
+      { id: 'we-stay', tone: 'Passive', verdict: 'bad', text: 'Don’t ask. Stay in Bengaluru and call home every night.', outcome: 'Your father recovers, slowly. You carry the guilt for months.', lesson: 'Not asking is a guaranteed no. Many managers will say yes to a well-made request.', effects: { sanity: -12 } },
+    ],
+    timeout: { outcome: 'Sachin keeps postponing the conversation. Weeks pass.', lesson: 'Hard conversations get harder with time.', effects: { sanity: -8 } },
+    requires: ['wfo'],
+    minWeek: 14,
+  },
+  {
+    id: 'hybrid_hero',
+    category: 'wfo',
+    codename: 'OPERATION: ANCHOR DAYS',
+    location: 'Engineering newsletter · Volunteers wanted',
+    briefing: 'Meera wants one volunteer per team to design that team’s hybrid working agreement: which days, which meetings, which norms.',
+    dialogue: [
+      { who: 'meera', line: 'Any volunteers to write our team’s hybrid agreement? I’d like a draft in two weeks.' },
+    ],
+    prompt: 'Does Sachin step up?',
+    choices: [
+      { id: 'hh-lead', tone: 'Strategic', verdict: 'best', text: 'Volunteer: run a two-question survey, propose anchor days plus meeting-free WFH days and core hours, and pilot it for a month.', outcome: 'The pilot works. Attendance on anchor days goes up, complaints go down, and Meera presents it to leadership with your name on it.', lesson: 'Volunteering to solve a problem everyone complains about is one of the fastest ways to earn trust.', effects: { reputation: 8, charisma: 4, network: 4 } },
+      { id: 'hh-survey', tone: 'Passive', verdict: 'okay', text: 'Fill in the survey honestly when someone else runs it.', outcome: 'Your input is counted. Someone else gets the credit.', lesson: 'Participating is good; leading is visible.', effects: { reputation: 1 } },
+      { id: 'hh-ignore', tone: 'Evasive', verdict: 'bad', text: 'Ignore it, then complain about whatever gets decided.', outcome: 'The agreement picks Mondays and Fridays. You hate it. Nobody wants to hear it.', lesson: 'If you don’t shape decisions, you inherit them.', effects: { reputation: -3, sanity: -3 } },
+      { id: 'hh-demand', tone: 'Savage', verdict: 'bad', text: 'Reply-all: “100% WFH or I quit.”', outcome: 'Meera replies only to you: “Let’s talk.” It’s not a fun talk.', lesson: 'Ultimatums over email burn bridges and never win policy debates.', effects: { reputation: -7 } },
+    ],
+    timeout: { outcome: 'Someone else volunteers.', lesson: 'Opportunities to lead are often hidden inside boring-looking asks.', effects: {} },
+    requires: ['wfo'],
+    minWeek: 16,
+  },
+];

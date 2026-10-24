@@ -4,11 +4,12 @@ import type { McqQuestion } from '../../types';
  * Lala-company round: basics, office IT, and spotting red flags —
  * the questions are funny, the lessons are not.
  */
-export const JHA2_QUESTIONS: McqQuestion[] = [
+export const LALA_QUESTIONS: McqQuestion[] = [
   // ---------------------------------------------------------------- tier 0
   {
     id: 'j-0a',
     tier: 0,
+    topic: 'lala',
     q: 'Jha ji: “Beta, first basic question. Full form of HTML?”',
     options: [
       'High Tech Modern Language',
@@ -22,6 +23,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-0b',
     tier: 0,
+    topic: 'lala',
     q: 'Jha ji: “Which shortcut is for undo? I keep deleting the GST file.”',
     options: ['Ctrl + U', 'Ctrl + Y', 'Ctrl + Z', 'Alt + F4'],
     answer: 2,
@@ -30,6 +32,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-0c',
     tier: 0,
+    topic: 'lala',
     q: 'Jha ji: “Java and JavaScript are same only, na? Script version of Java?”',
     options: [
       'Yes, JavaScript is compiled Java',
@@ -44,6 +47,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-1a',
     tier: 1,
+    topic: 'lala',
     q: 'Jha ji: “Our company website is on WordPress. WordPress is made in which language?”',
     options: ['Java', 'Kotlin', 'C++', 'PHP'],
     answer: 3,
@@ -52,6 +56,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-1b',
     tier: 1,
+    topic: 'lala',
     q: 'Jha ji: “Excel mein total nikalna hai. Which formula adds cells A1 to A10?”',
     options: ['=SUM(A1:A10)', '=ADD(A1:A10)', '=TOTAL(A1,A10)', '=A1+A10'],
     answer: 0,
@@ -60,6 +65,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-1c',
     tier: 1,
+    topic: 'lala',
     q: 'Jha ji: “You will also handle our domain. What does DNS do?”',
     options: [
       'Makes the internet faster',
@@ -74,6 +80,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-2a',
     tier: 2,
+    topic: 'lala',
     q: 'Jha ji: “Client is asking why our site shows ‘Not Secure’. What is the difference between HTTP and HTTPS?”',
     options: [
       'HTTPS is always faster',
@@ -87,6 +94,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-2b',
     tier: 2,
+    topic: 'lala',
     q: 'Jha ji’s nephew: “Git is that GitHub website only, right?”',
     options: [
       'Git is a version-control tool; GitHub is a service that hosts Git repositories',
@@ -100,6 +108,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-2c',
     tier: 2,
+    topic: 'lala',
     q: 'Jha ji: “Client’s database stores user passwords as plain text. Problem kya hai?”',
     options: [
       'No problem if the database itself has a password',
@@ -114,6 +123,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-3a',
     tier: 3,
+    topic: 'lala',
     q: 'The nephew wrote this login check. What is the biggest problem?',
     code: `String sql = "SELECT * FROM users WHERE name = '" + name
            + "' AND pass = '" + pass + "'";`,
@@ -129,6 +139,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-3b',
     tier: 3,
+    topic: 'lala',
     q: 'Jha ji: “Submit your original marksheets to us for the bond period, okay?” What’s the right response?',
     options: [
       'Submit happily — we’re a family',
@@ -142,6 +153,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-3c',
     tier: 3,
+    topic: 'lala',
     q: 'Jha ji: “Salary we will give in cash. No payslip, no PF, simple system.” What’s the smart response?',
     options: [
       'Great — cash is king',
@@ -156,6 +168,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-4a',
     tier: 4,
+    topic: 'lala',
     q: 'The nephew pushed the database password to a public GitHub repo, then deleted the file in a new commit. Why is that not enough?',
     options: [
       'GitHub hides passwords automatically',
@@ -169,6 +182,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-4b',
     tier: 4,
+    topic: 'lala',
     q: 'Jha ji: “The bond says if you leave before 2 years, you pay ₹2 lakh.” Before signing, what’s the smartest move?',
     options: [
       'Read the full clause, get terms in writing, check the penalty is proportionate, and ask someone you trust',
@@ -182,6 +196,7 @@ export const JHA2_QUESTIONS: McqQuestion[] = [
   {
     id: 'j-4c',
     tier: 4,
+    topic: 'lala',
     q: 'Jha ji: “Server is slow, nephew says buy a new one.” You find the app opens a new DB connection per request and never closes it. Best fix?',
     options: [
       'Buy the bigger server anyway',

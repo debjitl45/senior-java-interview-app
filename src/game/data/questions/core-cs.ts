@@ -1,11 +1,12 @@
 import type { McqQuestion } from '../../types';
 
-/** Product-company loop: DS&A first, then Java internals and design at scale. */
-export const GOOGLY_QUESTIONS: McqQuestion[] = [
+/** Core CS: algorithms, data structures, Java internals and design at scale. */
+export const CORE_CS_QUESTIONS: McqQuestion[] = [
   // ---------------------------------------------------------------- tier 0
   {
     id: 'g-0a',
     tier: 0,
+    topic: 'dsa',
     q: 'What is the time complexity of searching for a key in a balanced binary search tree with n nodes?',
     options: ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'],
     answer: 1,
@@ -14,6 +15,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-0b',
     tier: 0,
+    topic: 'dsa',
     q: 'Which data structure is the natural fit for checking whether brackets like "{[()]}" are balanced?',
     options: ['Queue', 'Hash set', 'Stack', 'Binary heap'],
     answer: 2,
@@ -22,6 +24,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-0c',
     tier: 0,
+    topic: 'java',
     q: 'What is the average-case time complexity of get() on a Java HashMap with a good hash function?',
     options: ['O(1)', 'O(log n)', 'O(n)', 'O(n²)'],
     answer: 0,
@@ -31,6 +34,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-1a',
     tier: 1,
+    topic: 'dsa',
     q: 'You must keep the k largest numbers from a stream of n numbers, using as little memory as possible. Best approach?',
     options: [
       'Store everything, sort, take the last k',
@@ -44,6 +48,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-1b',
     tier: 1,
+    topic: 'dsa',
     q: 'Which traversal of a binary search tree visits the keys in ascending order?',
     options: ['Pre-order', 'Post-order', 'Level-order', 'In-order'],
     answer: 3,
@@ -52,6 +57,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-1c',
     tier: 1,
+    topic: 'dsa',
     q: 'How do you detect a cycle in a singly linked list using O(1) extra space?',
     options: [
       'Store visited nodes in a HashSet',
@@ -66,6 +72,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-2a',
     tier: 2,
+    topic: 'dsa',
     q: 'What is the most efficient way to find the shortest path between two nodes in an unweighted graph?',
     options: ['Breadth-first search', 'Depth-first search', 'Bellman-Ford', 'Floyd-Warshall'],
     answer: 0,
@@ -74,6 +81,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-2b',
     tier: 2,
+    topic: 'dsa',
     q: 'What is the time complexity of building a binary heap from an unsorted array of n elements using bottom-up heapify?',
     options: ['O(log n)', 'O(n log n)', 'O(n²)', 'O(n)'],
     answer: 3,
@@ -82,6 +90,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-2c',
     tier: 2,
+    topic: 'concurrency',
     q: 'Two threads each run count++ 1,000 times on a shared int field with no synchronization. What will count be?',
     options: ['Always exactly 2000', 'Always exactly 1000', 'Possibly less than 2000', 'It won’t compile'],
     answer: 2,
@@ -91,6 +100,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-3a',
     tier: 3,
+    topic: 'design',
     q: 'You are designing a URL shortener for 100M new links a day. Which ID strategy avoids collisions without a database check on every write?',
     options: [
       'Random 6-character strings, retry on collision',
@@ -104,6 +114,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-3b',
     tier: 3,
+    topic: 'dsa',
     q: 'Which combination gives an LRU cache with O(1) get and put?',
     options: [
       'A HashMap plus a doubly linked list',
@@ -117,6 +128,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-3c',
     tier: 3,
+    topic: 'design',
     q: 'Why do distributed caches use consistent hashing instead of hash(key) % N?',
     options: [
       'It encrypts keys at rest',
@@ -131,6 +143,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-4a',
     tier: 4,
+    topic: 'dsa',
     q: 'Numbers arrive as a stream. You need O(log n) inserts and the current median in O(1). What do you use?',
     options: [
       'A sorted ArrayList with insertion',
@@ -144,6 +157,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-4b',
     tier: 4,
+    topic: 'concurrency',
     q: 'What does declaring a field volatile guarantee in the Java Memory Model?',
     options: [
       'Visibility and ordering: a write happens-before every later read of that field',
@@ -157,6 +171,7 @@ export const GOOGLY_QUESTIONS: McqQuestion[] = [
   {
     id: 'g-4c',
     tier: 4,
+    topic: 'java',
     q: 'p99 latency spikes every few minutes while p50 stays flat. GC logs show multi-second stop-the-world pauses on a 32 GB heap running Parallel GC. Best first move?',
     options: [
       'Double the heap to 64 GB',

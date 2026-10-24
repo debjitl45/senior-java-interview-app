@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Building2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { GameState, ReactionBucket } from '../types';
-import { getCompany } from '../data/companies';
-import { CURRENT_EMPLOYER, SACHIN } from '../data/cast';
-import { PASS_MARK, ROUND_LENGTH, correctCount, isCorrect, reactionBucket } from '../engine';
-import { Avatar, Btn, CompanyMark, Typewriter } from '../kit';
+import { getCompany, KIND_LABEL } from '../data/companies';
+import { SACHIN } from '../data/cast';
+import { PASS_MARK, ROUND_LENGTH, impressionFace, reactionBucket } from '../engine';
+import { Avatar, Btn, CompanyMark, DeltaChips, Typewriter } from '../kit';
 import type { GameActions } from '../useGame';
 
 /** The college group chat always has an opinion. */
@@ -27,21 +27,32 @@ const REPLIES: Record<ReactionBucket, { from: string; text: string }[]> = {
 const MOOD_COLOR: Record<ReactionBucket, string> = { great: '#34d399', meh: '#fbbf24', bad: '#fb7185' };
 
 export const ReactionScreen: React.FC<{ game: GameState; actions: GameActions }> = ({ game, actions }) => {
-  const company = game.active!;
-  const co = getCompany(company);
-  const run = game.runs[company]!;
-  const correct = correctCount(run);
-  const bucket = reactionBucket(correct);
+  const record = game.lastInterview === null ? undefined : game.history.interviews[game.lastInterview];
+
+  if (!record) {
+    return (
+      <div className="mx-auto max-w-md p-6 text-center">
+        <p className="text-[13px] text-[var(--muted)]">That interview is behind Sachin now.</p>
+        <Btn onClick={actions.leaveReaction} className="mx-auto mt-4">
+          Back to the week <ArrowRight className="h-4 w-4" />
+        </Btn>
+      </div>
+    );
+  }
+
+  const co = getCompany(record.company);
+  const bucket = reactionBucket(record.correct);
   const r = co.reactions[bucket];
+  const above = record.correct >= PASS_MARK;
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 pb-10 md:p-7" data-accent={co.accent}>
       <div className="flex items-center gap-2.5">
-        <CompanyMark id={company} size={30} />
+        <CompanyMark id={co.id} size={30} />
         <div>
           <div className="eyebrow">Right after the interview</div>
           <div className="text-[13px] font-bold text-white">
-            {co.name} · {co.kind}
+            {co.name} · {KIND_LABEL[co.kind]}
           </div>
         </div>
       </div>
@@ -70,28 +81,55 @@ export const ReactionScreen: React.FC<{ game: GameState; actions: GameActions }>
       </section>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Score */}
+        {/* Score and consequences */}
         <section className="card p-4">
           <div className="eyebrow">The scoreboard</div>
-          <div className="mt-2 flex items-end gap-2">
-            <span className="font-display text-4xl leading-none font-black text-white tabular">{correct}</span>
-            <span className="pb-0.5 text-sm text-[var(--dim)]">/ {ROUND_LENGTH} correct</span>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-xl bg-white/[0.04] p-2.5">
+              <div className="font-display text-2xl leading-none font-black text-white tabular">
+                {record.correct}
+                <span className="text-sm text-[var(--dim)]">/{ROUND_LENGTH}</span>
+              </div>
+              <div className="mt-1 text-[10px] font-bold text-[var(--dim)]">Technical</div>
+            </div>
+            <div className="rounded-xl bg-white/[0.04] p-2.5">
+              <div className="font-display text-2xl leading-none font-black text-white tabular">
+                {record.hrScore}
+                <span className="text-sm text-[var(--dim)]">/2</span>
+              </div>
+              <div className="mt-1 text-[10px] font-bold text-[var(--dim)]">HR aced</div>
+            </div>
+            <div className="rounded-xl bg-white/[0.04] p-2.5">
+              <div className="font-display text-2xl leading-none font-black text-white tabular">
+                {impressionFace(record.impression)} {record.impression}
+              </div>
+              <div className="mt-1 text-[10px] font-bold text-[var(--dim)]">Impression</div>
+            </div>
           </div>
-          <div className="mt-3 grid grid-cols-10 gap-1" aria-hidden>
-            {run.answers.map((_, i) => (
-              <span key={i} className={`h-1.5 rounded-full ${isCorrect(run, i) ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-            ))}
+          <div className="relative mt-3 h-2 rounded-full bg-white/[0.08]" aria-hidden>
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${(record.correct / ROUND_LENGTH) * 100}%`, background: above ? '#34d399' : '#fb7185' }}
+            />
+            <span className="absolute -top-1 h-4 w-0.5 rounded bg-white/70" style={{ left: `${(PASS_MARK / ROUND_LENGTH) * 100}%` }} />
           </div>
-          <p className="mt-3 text-[12px] leading-relaxed text-[var(--muted)]">
-            The offer line is {PASS_MARK}/{ROUND_LENGTH}. HR will email the verdict once Sachin is back at his desk.
+          <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
+            {above
+              ? `Above the ${PASS_MARK}/${ROUND_LENGTH} offer line. The verdict lands in the inbox when the week ends.`
+              : `Below the ${PASS_MARK}/${ROUND_LENGTH} offer line. A polite rejection is probably on its way.`}
           </p>
+
+          <div className="eyebrow mt-4">How the day changed Sachin</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <DeltaChips effects={record.deltas} />
+            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-200">+{record.xp} XP</span>
+          </div>
+          {co.stats.toxicity >= 4 && <p className="mt-2 text-[11px] text-rose-200/80">That panel was draining. Toxic places cost extra energy and sanity.</p>}
+
           <div className="eyebrow mt-4">Company vibe</div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {co.vibe.map((v) => (
-              <span
-                key={v}
-                className="rounded-full border border-[var(--a-line)] bg-[var(--a-soft)] px-2.5 py-1 text-[10.5px] font-bold text-[var(--a)]"
-              >
+              <span key={v} className="rounded-full border border-[var(--a-line)] bg-[var(--a-soft)] px-2.5 py-1 text-[10.5px] font-bold text-[var(--a)]">
                 {v}
               </span>
             ))}
@@ -102,7 +140,7 @@ export const ReactionScreen: React.FC<{ game: GameState; actions: GameActions }>
         <section className="card overflow-hidden">
           <div className="flex items-center gap-2.5 border-b border-white/[0.07] bg-white/[0.03] px-4 py-2.5">
             <span className="text-lg" aria-hidden>
-              🎓
+              {'\u{1F393}'}
             </span>
             <div>
               <div className="text-[12.5px] font-bold text-white">College Gang</div>
@@ -135,18 +173,9 @@ export const ReactionScreen: React.FC<{ game: GameState; actions: GameActions }>
         </section>
       </div>
 
-      <section className="card flex flex-col items-center gap-3 p-4 text-center sm:flex-row sm:text-left">
-        <Building2 className="h-8 w-8 shrink-0 text-amber-300" />
-        <div className="flex-1">
-          <div className="text-[13px] font-bold text-white">Meanwhile, back at the office</div>
-          <p className="text-[12px] text-[var(--muted)]">
-            Sachin still has a day job at {CURRENT_EMPLOYER} — and something is brewing.
-          </p>
-        </div>
-        <Btn onClick={actions.finishReaction} className="w-full sm:w-auto">
-          Head back to the office <ArrowRight className="h-4 w-4" />
-        </Btn>
-      </section>
+      <Btn onClick={actions.leaveReaction} className="w-full">
+        Back to the week <ArrowRight className="h-4 w-4" />
+      </Btn>
     </div>
   );
 };

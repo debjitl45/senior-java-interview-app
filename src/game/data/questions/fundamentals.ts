@@ -1,19 +1,21 @@
 import type { McqQuestion } from '../../types';
 
-/** Service-company round: textbook Java, OOP, SQL and delivery process. */
-export const TIPRO_QUESTIONS: McqQuestion[] = [
+/** Fundamentals: textbook Java, OOP, SQL and delivery process. */
+export const FUNDAMENTALS_QUESTIONS: McqQuestion[] = [
   // ---------------------------------------------------------------- tier 0
   {
     id: 't-0a',
     tier: 0,
+    topic: 'basics',
     q: 'Which of these is NOT one of the four pillars of object-oriented programming?',
     options: ['Encapsulation', 'Compilation', 'Inheritance', 'Polymorphism'],
     answer: 1,
-    why: 'The four pillars are encapsulation, abstraction, inheritance and polymorphism. Compilation is just how source becomes bytecode — Mr. Srinivasan will not accept it as a fifth pillar.',
+    why: 'The four pillars are encapsulation, abstraction, inheritance and polymorphism. Compilation is just how source becomes bytecode — your interviewer will not accept it as a fifth pillar.',
   },
   {
     id: 't-0b',
     tier: 0,
+    topic: 'java',
     q: 'What is the default value of an int instance variable in Java?',
     options: ['null', '-1', '0', 'It must be initialised or the code won’t compile'],
     answer: 2,
@@ -22,6 +24,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-0c',
     tier: 0,
+    topic: 'db',
     q: 'Which SQL statement removes a table along with its structure?',
     options: ['DELETE', 'TRUNCATE', 'REMOVE', 'DROP'],
     answer: 3,
@@ -31,6 +34,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-1a',
     tier: 1,
+    topic: 'java',
     q: 'For two String variables in Java, what is the difference between == and .equals()?',
     options: [
       '== compares references; .equals() compares contents',
@@ -44,6 +48,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-1b',
     tier: 1,
+    topic: 'java',
     q: 'The service-company classic: what are final, finally and finalize()?',
     options: [
       'Three keywords that all declare constants',
@@ -57,6 +62,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-1c',
     tier: 1,
+    topic: 'process',
     q: 'In Scrum, who owns and prioritises the product backlog?',
     options: ['The Scrum Master', 'The most senior developer', 'The client’s CFO', 'The Product Owner'],
     answer: 3,
@@ -66,6 +72,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-2a',
     tier: 2,
+    topic: 'java',
     q: 'You need to store unique elements and also preserve the order in which they were inserted. Which collection?',
     options: ['HashSet', 'TreeSet', 'ArrayList', 'LinkedHashSet'],
     answer: 3,
@@ -74,15 +81,17 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-2b',
     tier: 2,
+    topic: 'java',
     q: 'What does this print?',
-    code: 'System.out.println(10 + 20 + "Tipro" + 10 + 20);',
-    options: ['30Tipro30', '1020Tipro1020', '30Tipro1020', 'Compilation error'],
+    code: 'System.out.println(10 + 20 + "Java" + 10 + 20);',
+    options: ['30Java30', '1020Java1020', '30Java1020', 'Compilation error'],
     answer: 2,
     why: '+ is evaluated left to right. 10 + 20 is integer addition (30); once a String joins in, every following + is concatenation, so 10 and 20 are appended as text.',
   },
   {
     id: 't-2c',
     tier: 2,
+    topic: 'process',
     q: 'Two days before UAT, the client asks for a “small” change that touches three modules. What should happen first?',
     options: [
       'Raise a change request with an impact analysis of effort, timeline and risk',
@@ -97,6 +106,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-3a',
     tier: 3,
+    topic: 'db',
     q: 'Which query returns employees earning more than the average salary?',
     options: [
       'SELECT * FROM emp WHERE salary > AVG(salary);',
@@ -110,6 +120,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-3b',
     tier: 3,
+    topic: 'java',
     q: 'A class overrides equals() but not hashCode(). What happens when “equal” objects are added to a HashSet?',
     options: [
       'Compilation error',
@@ -123,6 +134,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-3c',
     tier: 3,
+    topic: 'java',
     q: 'What is the simplest thread-safe Singleton in Java that also survives serialization and reflection attacks?',
     options: [
       'A lazily created instance without synchronization',
@@ -137,6 +149,7 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-4a',
     tier: 4,
+    topic: 'db',
     q: 'Which transaction isolation level prevents dirty reads but still allows non-repeatable reads?',
     options: ['READ UNCOMMITTED', 'READ COMMITTED', 'REPEATABLE READ', 'SERIALIZABLE'],
     answer: 1,
@@ -145,15 +158,17 @@ export const TIPRO_QUESTIONS: McqQuestion[] = [
   {
     id: 't-4b',
     tier: 4,
+    topic: 'java',
     q: 'What does this print?',
-    code: 'String a = "Tipro";\nString b = "Tip" + "ro";\nString c = new String("Tipro");\nSystem.out.println((a == b) + " " + (a == c));',
+    code: 'String a = "Java";\nString b = "Ja" + "va";\nString c = new String("Java");\nSystem.out.println((a == b) + " " + (a == c));',
     options: ['true true', 'false false', 'true false', 'false true'],
     answer: 2,
-    why: '"Tip" + "ro" is a compile-time constant, folded into "Tipro" and interned — the same object as a. new String(...) always creates a fresh object on the heap, so a == c is false.',
+    why: '"Ja" + "va" is a compile-time constant, folded into "Java" and interned — the same object as a. new String(...) always creates a fresh object on the heap, so a == c is false.',
   },
   {
     id: 't-4c',
     tier: 4,
+    topic: 'java',
     q: 'In Java 8+, what does HashMap do when one bucket collects too many colliding keys (8 or more, with a table of at least 64)?',
     options: [
       'Throws a ConcurrentModificationException',

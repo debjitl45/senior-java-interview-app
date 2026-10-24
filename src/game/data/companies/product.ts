@@ -1,0 +1,160 @@
+import { defineCompany } from './define';
+
+export const PEAR = defineCompany({
+  id: 'pear',
+  name: 'Pear',
+  kind: 'product',
+  tier: 'S',
+  tagline: 'Think different. Then sign this NDA.',
+  accent: 'lime',
+  brand: { bg: '#f5f5f4', fg: '#65a30d', glyph: '\u{1F350}' },
+  location: 'Hyderabad · Office-first',
+  domain: 'pear.careers',
+  stats: { wlb: 3, toxicity: 3, pay: 5, growth: 3, security: 4 },
+  culture: [
+    'Secrecy is a feature: you may not know what the team next to you builds.',
+    'Obsessive attention to detail — a pixel off is a bug.',
+    'Beautiful offices, very few slides.',
+  ],
+  reviews: [{ stars: 4, text: 'Great products, great pay. I still can’t tell my mom what I work on.', by: 'Software Engineer' }],
+  vibe: ['Secrecy', 'Pixel-perfect', 'NDA'],
+  interviewer: {
+    name: 'Rohan Sethi',
+    title: 'Engineering Manager · Cloud Services',
+    avatar: '\u{1F9D1}\u{1F3FB}‍\u{1F4BC}',
+    intro: 'Hi Sachin. Before we start: everything in this room is confidential. Even the chairs. Shall we?',
+    quirks: ['Good. Could it be... more elegant?', 'I can neither confirm nor deny that we use Java. Next question.'],
+  },
+  ctc: [34, 52],
+  payNote: '+ RSUs',
+  topics: { java: 3, concurrency: 3, design: 3 },
+  epilogue:
+    'Sachin joins Pear and signs four NDAs before lunch. He can’t tell anyone what he works on, but his code ships on devices people queue overnight to buy. He starts saying “it just works” unironically.',
+});
+
+export const ENVYDIA = defineCompany({
+  id: 'envydia',
+  name: 'Envydia',
+  kind: 'product',
+  tier: 'S',
+  tagline: 'The more GPUs you buy, the more you save. Trust us.',
+  accent: 'lime',
+  brand: { bg: '#111827', fg: '#76b900', glyph: 'E' },
+  location: 'Pune · Hybrid',
+  domain: 'envydia.jobs',
+  stats: { wlb: 3, toxicity: 2, pay: 5, growth: 5, security: 4 },
+  culture: [
+    'The stock went up so much that nobody talks about salary anymore.',
+    'Parallelism experts everywhere; you will feel slow, then fast.',
+    'Leather jackets optional but encouraged.',
+  ],
+  reviews: [{ stars: 5, text: 'Hardest problems I’ve worked on. Two coworkers retired early on stock.', by: 'Senior Engineer' }],
+  vibe: ['Parallelism', 'Stock rocket', 'Leather jacket'],
+  interviewer: {
+    name: 'Dr. Meenakshi Pillai',
+    title: 'Distinguished Engineer · Accelerated Computing',
+    avatar: '\u{1F469}\u{1F3FD}‍\u{1F52C}',
+    intro: 'Hello Sachin. We think in thousands of threads. Let’s see how you think in one.',
+    quirks: ['Could we run that answer on 10,000 cores?', 'Correct — but have you considered more parallelism?'],
+  },
+  ctc: [36, 58],
+  payNote: '+ RSUs (rocketing)',
+  topics: { concurrency: 4, dsa: 3, java: 2, design: 2 },
+  epilogue:
+    'Sachin joins Envydia just as the whole world wants their chips. He learns more about parallelism in a year than in his entire degree, and his RSUs develop a mind of their own. He buys his parents a car. Then, after some thought, another one.',
+});
+
+export const OOBER = defineCompany({
+  id: 'oober',
+  name: 'Oober',
+  kind: 'product',
+  tier: 'A',
+  tagline: 'Your ride, your rules. Surge pricing applies to opinions.',
+  accent: 'teal',
+  brand: { bg: '#000000', fg: '#ffffff', glyph: 'O' },
+  location: 'Bengaluru · Hybrid',
+  domain: 'oober.careers',
+  stats: { wlb: 3, toxicity: 3, pay: 4, growth: 4, security: 3 },
+  culture: [
+    'Everything is a marketplace: riders, drivers, even meeting rooms.',
+    'Real-time systems everywhere; latency is a moral failure.',
+    'Hack weeks are legendary.',
+  ],
+  reviews: [{ stars: 4, text: 'Hard real-time problems at great scale. The surge-pricing jokes get old fast.', by: 'Software Engineer II' }],
+  vibe: ['Real-time', 'Geo', 'Surge'],
+  interviewer: {
+    name: 'Farhan Ali',
+    title: 'Senior Engineer · Marketplace',
+    avatar: '\u{1F9D4}\u{1F3FD}',
+    intro: 'Hey Sachin. We match millions of riders and drivers every day. Every question today is secretly a matching problem.',
+    quirks: ['Your answer is arriving in 2 minutes. 4 minutes. 9 minutes.', 'Nice — 5 stars. Would ride again.'],
+  },
+  ctc: [26, 42],
+  payNote: '+ RSUs',
+  topics: { design: 4, dsa: 2, concurrency: 2, cloud: 2 },
+  epilogue:
+    'Sachin joins Oober and builds the service that decides which driver gets which rider. He now judges every cab ride by its ETA accuracy and tips generously out of professional solidarity.',
+});
+
+export const HPACKET = defineCompany({
+  id: 'hpacket',
+  name: 'Hewlett-Packet',
+  kind: 'product',
+  tier: 'A',
+  tagline: 'Keep reinventing. Also keep reinstalling the printer driver.',
+  accent: 'sky',
+  brand: { bg: '#0369a1', fg: '#ffffff', glyph: 'H' },
+  location: 'Bengaluru · Hybrid',
+  domain: 'hewlett-packet.jobs',
+  stats: { wlb: 4, toxicity: 2, pay: 3, growth: 3, security: 4 },
+  culture: [
+    'A legendary engineering heritage and a printer for every mood.',
+    'Enterprise customers who still run Java 8. Lovingly.',
+    'Calm teams, long tenures, reliable appraisals.',
+  ],
+  reviews: [{ stars: 4, text: 'Solid work-life balance. The printer jokes never stop, but neither do the paychecks.', by: 'Software Engineer' }],
+  vibe: ['Enterprise', 'Java 8 forever', 'Printer jokes'],
+  interviewer: {
+    name: 'George Mathew',
+    title: 'Senior Architect · 18 yrs',
+    avatar: '\u{1F468}\u{1F3FD}‍\u{1F9B3}',
+    intro: 'Good afternoon, Sachin. Some of our customers have run our software since before you were born. Stability is everything.',
+    quirks: ['Good. That would survive a 10-year support contract.', 'Paper jam in tray 2. Sorry — continue.'],
+  },
+  ctc: [18, 28],
+  topics: { java: 4, basics: 2, design: 2, db: 2 },
+  epilogue:
+    'Sachin joins Hewlett-Packet. The pace is calm, the systems are older than his college, and he becomes the in-house hero for migrating a giant monolith from Java 8 to 21. At every family function, someone asks him to fix their printer.',
+});
+
+export const SALESFARCE = defineCompany({
+  id: 'salesfarce',
+  name: 'Salesfarce',
+  kind: 'product',
+  tier: 'A',
+  tagline: 'The number-one CRM for tracking how many CRMs you have.',
+  accent: 'sky',
+  brand: { bg: '#0ea5e9', fg: '#ffffff', glyph: '☁' },
+  location: 'Hyderabad · Hybrid',
+  domain: 'salesfarce.careers',
+  stats: { wlb: 4, toxicity: 2, pay: 4, growth: 4, security: 3 },
+  culture: [
+    '“Ohana” culture: big on family, volunteering and mascots.',
+    'Everything is a cloud. Even the canteen is “Food Cloud”.',
+    'Generous volunteering leave and wellness days.',
+  ],
+  reviews: [{ stars: 4, text: 'Kind people, solid pay, a lot of acronyms. You will learn what “ohana” means.', by: 'MTS' }],
+  vibe: ['Ohana', 'Clouds', 'Mascots'],
+  interviewer: {
+    name: 'Divya Narang',
+    title: 'Lead MTS · Platform',
+    avatar: '\u{1F469}\u{1F3FD}‍\u{1F4BB}',
+    intro: 'Hi Sachin! Welcome to the ohana. Don’t worry — the questions are friendlier than our pricing page.',
+    quirks: ['Love that answer. Let’s put it in a dashboard.', 'Trust is our number-one value. Do you trust your answer?'],
+  },
+  ctc: [26, 40],
+  payNote: '+ RSUs',
+  topics: { web: 3, db: 3, design: 2, java: 2, cloud: 2 },
+  epilogue:
+    'Sachin joins Salesfarce and gets three things on day one: a laptop, a plush mascot and volunteering leave. He builds APIs that power sales teams worldwide and learns to say “ohana” with a straight face.',
+});

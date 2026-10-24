@@ -1,11 +1,12 @@
 import type { McqQuestion } from '../../types';
 
-/** Start-up round: practical backend — HTTP, caching, events, and what breaks at scale. */
-export const TWIGGY_QUESTIONS: McqQuestion[] = [
+/** Practical backend: HTTP, caching, events, and what breaks at scale. */
+export const BACKEND_QUESTIONS: McqQuestion[] = [
   // ---------------------------------------------------------------- tier 0
   {
     id: 'w-0a',
     tier: 0,
+    topic: 'web',
     q: 'Which HTTP method is idempotent and typically used to replace a resource entirely?',
     options: ['POST', 'PATCH', 'PUT', 'CONNECT'],
     answer: 2,
@@ -14,6 +15,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-0b',
     tier: 0,
+    topic: 'web',
     q: 'A customer places an order and your API creates it successfully. The most appropriate status code?',
     options: ['201 Created', '200 OK', '204 No Content', '302 Found'],
     answer: 0,
@@ -22,6 +24,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-0c',
     tier: 0,
+    topic: 'web',
     q: 'Your app gets HTTP 429 from the maps API during the dinner rush. What does it mean?',
     options: [
       'The maps server crashed',
@@ -36,6 +39,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-1a',
     tier: 1,
+    topic: 'design',
     q: 'Restaurant menus are read 10,000 times a second but change only a few times a day. Best way to cut database load?',
     options: [
       'Add more indexes and hope',
@@ -49,6 +53,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-1b',
     tier: 1,
+    topic: 'web',
     q: 'In Spring Boot, what is the recommended way to inject dependencies?',
     options: [
       '@Autowired on private fields',
@@ -62,6 +67,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-1c',
     tier: 1,
+    topic: 'db',
     q: 'SELECT * FROM orders WHERE user_id = ? takes 4 seconds on a 50M-row table. First thing to try?',
     options: ['Add an index on user_id', 'Double the server’s RAM', 'Migrate to a NoSQL database', 'Add LIMIT 1000000'],
     answer: 0,
@@ -71,6 +77,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-2a',
     tier: 2,
+    topic: 'web',
     q: 'A user double-taps “Pay” and two identical payment requests hit your server. How do you avoid charging twice?',
     options: [
       'Tell users not to double-tap',
@@ -84,6 +91,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-2b',
     tier: 2,
+    topic: 'design',
     q: 'After an order is placed you must notify the restaurant, assign a rider and send an SMS. Why publish an event to Kafka instead of calling all three services synchronously?',
     options: [
       'Kafka makes the code shorter',
@@ -97,6 +105,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-2c',
     tier: 2,
+    topic: 'db',
     q: 'In JPA/Hibernate, what is the N+1 query problem?',
     options: [
       'N users calling the API at the same time',
@@ -111,6 +120,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-3a',
     tier: 3,
+    topic: 'design',
     q: 'You must enforce 100 requests per minute per user across 20 API servers. Best approach?',
     options: [
       'An in-memory counter on each server',
@@ -124,6 +134,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-3b',
     tier: 3,
+    topic: 'design',
     q: 'The rider’s location updates every 3 seconds and must show live in the customer’s app. Most efficient transport at scale?',
     options: [
       'Push over WebSockets or Server-Sent Events',
@@ -137,6 +148,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-3c',
     tier: 3,
+    topic: 'cloud',
     q: 'A downstream payment service keeps timing out. What does a circuit breaker (e.g. Resilience4j) do?',
     options: [
       'Retries forever until it succeeds',
@@ -151,6 +163,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-4a',
     tier: 4,
+    topic: 'design',
     q: 'In a saga, the payment succeeded but no rider can be assigned. What should happen?',
     options: [
       'A distributed lock rolls back every service automatically',
@@ -164,6 +177,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-4b',
     tier: 4,
+    topic: 'design',
     q: 'A Kafka consumer writes an event to the database, then crashes before committing its offset. What happens on restart, and how do you stay correct?',
     options: [
       'The event is lost; nothing can be done',
@@ -177,6 +191,7 @@ export const TWIGGY_QUESTIONS: McqQuestion[] = [
   {
     id: 'w-4c',
     tier: 4,
+    topic: 'db',
     q: 'Flash sale: 10,000 users try to buy 100 discounted biryanis in one second. How do you prevent overselling?',
     options: [
       'Read the stock, check it’s above 0, then update it in a separate statement',

@@ -1,20 +1,33 @@
-import type { CompanyId, McqQuestion } from '../../types';
-import { GOOGLY_QUESTIONS } from './googly';
-import { TIPRO_QUESTIONS } from './tipro';
-import { TWIGGY_QUESTIONS } from './twiggy';
-import { JHA2_QUESTIONS } from './jha2';
+import type { McqQuestion } from '../../types';
+import { CORE_CS_QUESTIONS } from './core-cs';
+import { FUNDAMENTALS_QUESTIONS } from './fundamentals';
+import { BACKEND_QUESTIONS } from './backend';
+import { LALA_QUESTIONS } from './lala';
+import { JAVA_QUESTIONS } from './java';
+import { CONCURRENCY_QUESTIONS } from './concurrency';
+import { DSA_QUESTIONS } from './dsa';
+import { DESIGN_QUESTIONS } from './design';
+import { DB_QUESTIONS } from './db';
+import { WEB_CLOUD_QUESTIONS } from './web-cloud';
+import { FINANCE_QUESTIONS } from './finance';
+import { BASICS_QUESTIONS } from './basics';
 
-export const QUESTION_BANK: Record<CompanyId, McqQuestion[]> = {
-  googly: GOOGLY_QUESTIONS,
-  tipro: TIPRO_QUESTIONS,
-  twiggy: TWIGGY_QUESTIONS,
-  jha2: JHA2_QUESTIONS,
-};
+/** Every technical question; companies draw from it by topic and difficulty. */
+export const QUESTION_POOL: McqQuestion[] = [
+  ...CORE_CS_QUESTIONS,
+  ...FUNDAMENTALS_QUESTIONS,
+  ...BACKEND_QUESTIONS,
+  ...LALA_QUESTIONS,
+  ...JAVA_QUESTIONS,
+  ...CONCURRENCY_QUESTIONS,
+  ...DSA_QUESTIONS,
+  ...DESIGN_QUESTIONS,
+  ...DB_QUESTIONS,
+  ...WEB_CLOUD_QUESTIONS,
+  ...FINANCE_QUESTIONS,
+  ...BASICS_QUESTIONS,
+];
 
-const BY_ID: Record<string, McqQuestion> = Object.fromEntries(
-  Object.values(QUESTION_BANK)
-    .flat()
-    .map((q) => [q.id, q]),
-);
+const BY_ID: Record<string, McqQuestion> = Object.fromEntries(QUESTION_POOL.map((q) => [q.id, q]));
 
 export const getQuestion = (id: string): McqQuestion | undefined => BY_ID[id];

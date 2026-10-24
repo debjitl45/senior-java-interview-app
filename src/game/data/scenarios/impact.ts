@@ -1,0 +1,122 @@
+import type { Scenario } from '../../types';
+
+/** Escaping busywork and getting the impactful work instead. */
+export const IMPACT: Scenario[] = [
+  {
+    id: 'slide_slave',
+    category: 'impact',
+    codename: 'OPERATION: DECK THE HALLS',
+    location: 'Rakesh’s desk · Monday, 10:00 AM',
+    briefing: 'Every week, the VP wants a status review. Every week, Rakesh wants a 40-slide deck. Every week, it eats Sachin’s entire Friday.',
+    dialogue: [
+      { who: 'rakesh', line: 'Great deck last week, Sachin. Same again this Friday? Maybe add a few more charts. The VP loves charts.' },
+    ],
+    prompt: 'Another Friday about to disappear into PowerPoint. What does Sachin say?',
+    choices: [
+      { id: 'ss-dashboard', tone: 'Strategic', verdict: 'best', text: 'What if I build a live dashboard from Jira once — plus a one-page summary each week? Saves six hours weekly, and the VP gets fresher numbers.', outcome: 'Rakesh is sceptical, then thrilled. The VP starts using the dashboard in her own reviews. You get your Fridays back — and some credit.', lesson: 'The best way to escape recurring busywork is to automate it into something more valuable.', effects: { reputation: 6, skill: 3, sanity: 6 } },
+      { id: 'ss-timebox', tone: 'Diplomatic', verdict: 'okay', text: 'Sure, but let’s cap it at ten slides — the VP only reads the first three anyway.', outcome: 'Rakesh agrees. You save half a day each week. Still slides, though.', lesson: 'Time-boxing reduces the damage, but it doesn’t remove the problem.', effects: { reputation: 2, sanity: 2 } },
+      { id: 'ss-yes', tone: 'Passive', verdict: 'bad', text: 'Of course. Forty slides, more charts.', outcome: 'Your Fridays become slide factories. Your actual code slows down, and that shows up in your appraisal.', lesson: 'If you never question low-value work, it quietly becomes your job.', effects: { reputation: 2, sanity: -9, energy: -6 } },
+      { id: 'ss-forget', tone: 'Evasive', verdict: 'bad', text: 'Just... “forget” to send it this week.', outcome: 'Rakesh presents with no deck and gets grilled by the VP. Guess whose name comes up.', lesson: 'Passive resistance is the most expensive way to say no.', effects: { reputation: -10 } },
+    ],
+    timeout: { outcome: 'Sachin nods vaguely. Friday arrives, and so does the slide template.', lesson: 'Unspoken objections don’t count as objections.', effects: { sanity: -6 } },
+    minWeek: 3,
+  },
+  {
+    id: 'zombie_report',
+    category: 'impact',
+    codename: 'OPERATION: ZOMBIE REPORT',
+    location: 'Sachin’s inbox · 9:00 AM, as always',
+    briefing: 'Since 2019, someone at Infinite Loop has sent a daily Excel report to 14 people. That someone is now Sachin. It takes 40 minutes a day. Nobody has ever replied.',
+    dialogue: [
+      { who: 'vikram', line: 'Bro, I don’t think anyone even opens that report. I unsubscribed in 2021.' },
+    ],
+    prompt: 'What does Sachin do with the zombie report?',
+    choices: [
+      { id: 'zr-sunset', tone: 'Strategic', verdict: 'best', text: 'Check the mail open stats and ask the recipients. Announce a one-week pause; if nobody needs it, retire it — and document why.', outcome: 'One person — the CFO’s assistant — uses a single column. You build her a tiny query. The other 39 minutes a day are yours again.', lesson: 'Before killing busywork, find out who really uses it. Then serve that need in the cheapest way.', effects: { sanity: 7, reputation: 4, skill: 2 } },
+      { id: 'zr-automate', tone: 'Strategic', verdict: 'okay', text: 'Write a script that generates and sends it automatically.', outcome: 'You save time and learn some automation. The zombie lives forever now, but at least it walks itself.', lesson: 'Automating useless work is better than doing it by hand — but deleting it is better still.', effects: { skill: 4, sanity: 3 } },
+      { id: 'zr-manual', tone: 'Passive', verdict: 'bad', text: 'Keep sending it manually. It’s tradition.', outcome: 'Another 40 minutes a day, every day, for a report nobody reads.', lesson: 'Traditions at work deserve to be questioned at least once a year.', effects: { sanity: -5 } },
+      { id: 'zr-stop', tone: 'Evasive', verdict: 'bad', text: 'Stop sending it silently.', outcome: 'On day 3, the CFO’s assistant escalates. Turns out one person needed it. You look careless.', lesson: 'Retiring work silently is risky. Announce it, then retire it.', effects: { reputation: -7 } },
+    ],
+    timeout: { outcome: 'The report goes out at 9 AM. And tomorrow. And the day after.', lesson: 'Busywork survives on inertia.', effects: { sanity: -4 } },
+    minWeek: 2,
+    excludes: ['gone:vikram'],
+  },
+  {
+    id: 'shiny_project',
+    category: 'impact',
+    codename: 'OPERATION: SHINY OBJECT',
+    location: 'Meera’s cabin · Tuesday, 4:30 PM',
+    briefing: 'Meera is staffing the new payments revamp: visible, risky, hard. Sachin is comfortable on the legacy reporting module he knows inside out.',
+    dialogue: [
+      { who: 'meera', line: 'I need someone to lead the payments revamp backend. High visibility, real deadlines. Interested?' },
+      { who: 'rohit', line: '(walking past) Meera, I’d love to take that if Sachin’s busy.', aside: true },
+    ],
+    prompt: 'Big project or safe harbour?',
+    choices: [
+      { id: 'sp-take', tone: 'Assertive', verdict: 'best', text: 'Yes — on one condition: I hand my legacy tickets to Tanmay with a proper runbook, so I can focus on the revamp.', outcome: 'Meera agrees on the spot. Three months later, the revamp is the line on your resume that interviewers keep asking about.', lesson: 'Say yes to impact, but trade away low-value work at the same time — scope is a negotiation.', effects: { reputation: 8, skill: 5, energy: -6 } },
+      { id: 'sp-both', tone: 'Passive', verdict: 'bad', text: 'Yes! And I’ll keep the legacy module too.', outcome: 'You do two jobs badly for a quarter. Burnout knocks politely, then not politely.', lesson: 'Taking on new scope without dropping old scope is how good engineers burn out.', effects: { reputation: 3, energy: -16, sanity: -10 } },
+      { id: 'sp-safe', tone: 'Passive', verdict: 'okay', text: 'I’ll pass for now. I know the legacy module best.', outcome: 'Rohit gets it. It goes fine. Your next appraisal says “solid, but needs to stretch”.', lesson: 'Comfort is fine for a while — but growth lives where the risk is.', effects: { sanity: 4, reputation: -3 } },
+      { id: 'sp-deflect', tone: 'Evasive', verdict: 'bad', text: 'Maybe Rohit should take it — he’s interested.', outcome: 'He takes it, nails it and presents it at the town hall. You clap politely.', lesson: 'Don’t hand away the opportunities you secretly want.', effects: { reputation: -4, sanity: -4 } },
+    ],
+    timeout: { outcome: 'Sachin hesitates. Meera says, “No worries, Rohit’s keen.” Done.', lesson: 'Opportunities have short half-lives.', effects: { reputation: -3 } },
+    minWeek: 6,
+  },
+  {
+    id: 'meeting_marathon',
+    category: 'impact',
+    codename: 'OPERATION: CALENDAR TETRIS',
+    location: 'Outlook calendar · Tuesday',
+    briefing: 'Tuesday has seven hours of meetings. Three have no agenda. Two have 30 attendees. The sprint ends Thursday and Sachin hasn’t written a line of code this week.',
+    dialogue: [
+      { who: 'shreya', line: 'Adding you to a “quick sync” at 4 — just to align on the alignment meeting.' },
+    ],
+    prompt: 'What does Sachin do with his calendar?',
+    choices: [
+      { id: 'mm-focus', tone: 'Assertive', verdict: 'best', text: 'Decline the meetings without an agenda, ask for async updates instead, and block two daily focus slots marked “deep work”.', outcome: 'Most organisers just send notes. You ship your sprint work by Wednesday. Two teammates copy your focus blocks.', lesson: 'Your calendar is your job description. Defend the time that produces your actual output.', effects: { sanity: 7, reputation: 3, skill: 2 } },
+      { id: 'mm-delegate', tone: 'Strategic', verdict: 'okay', text: 'Send Tanmay to two of the meetings as your note-taker — good exposure for him.', outcome: 'Tanmay learns a lot and writes excellent notes. You get a few hours back.', lesson: 'Delegating meetings can be a gift to juniors — as long as they’re learning, not just covering.', effects: { reputation: 2, sanity: 3 } },
+      { id: 'mm-all', tone: 'Passive', verdict: 'bad', text: 'Attend everything, then code at night.', outcome: 'You attend 14 meetings and contribute in two. The code gets written at 1 AM — with 1 AM bugs.', lesson: 'Meetings expand to fill the time you give them. So does exhaustion.', effects: { energy: -12, sanity: -7 } },
+      { id: 'mm-nuke', tone: 'Savage', verdict: 'bad', text: 'Decline everything — including the client call.', outcome: 'The client call was the one meeting that mattered. Rakesh is not amused.', lesson: 'Cut meetings with judgement, not with a chainsaw.', effects: { reputation: -9 } },
+    ],
+    timeout: { outcome: 'The meetings happen to Sachin, one after another.', lesson: 'If you don’t manage your calendar, everyone else will.', effects: { sanity: -5, energy: -5 } },
+  },
+  {
+    id: 'hackathon',
+    category: 'impact',
+    codename: 'OPERATION: 48 HOURS',
+    location: 'Company hackathon announcement · Wednesday',
+    briefing: 'The annual hackathon is this weekend. The winning team presents to the CEO. Sachin is tired, but he does have an idea.',
+    dialogue: [
+      { who: 'ananya', line: 'Want to team up? I was thinking we automate on-call runbooks. Every engineer here hates them.' },
+      { who: 'rohit', line: 'Join my team! We’re building a metaverse HR portal with blockchain.', aside: true },
+    ],
+    prompt: 'What’s Sachin’s weekend plan?',
+    choices: [
+      { id: 'hk-ananya', tone: 'Strategic', verdict: 'best', text: 'Team up with Ananya: a small, sharp idea that fixes a real pain. Sleep in shifts.', outcome: 'Your runbook bot wins second place and actually gets adopted. The CEO asks a question in your demo and you answer it well.', lesson: 'Hackathons reward solving real problems with small scope — not buzzwords.', effects: { skill: 5, network: 5, reputation: 5, energy: -10 } },
+      { id: 'hk-rest', tone: 'Honest', verdict: 'okay', text: 'Skip it. “I need the weekend to recharge.”', outcome: 'You sleep, go for a walk and come back sharp on Monday. Nothing wrong with that.', lesson: 'Rest is a legitimate choice. Not every opportunity needs to be taken.', effects: { energy: 10, sanity: 6 } },
+      { id: 'hk-rohit', tone: 'Passive', verdict: 'bad', text: 'Join Rohit’s metaverse blockchain HR portal.', outcome: 'Nothing works by Sunday. The demo is a slide deck of a slide deck. You are very tired.', lesson: 'Pick teams for the problem, not for the hype.', effects: { energy: -14, sanity: -5 } },
+      { id: 'hk-mock', tone: 'Savage', verdict: 'bad', text: 'Mock the hackathon in the team group: “Free labour with pizza.”', outcome: 'Some people laugh. The organisers — including Meera — do not.', lesson: 'Cynicism is cheap; it also gets noticed by the wrong people.', effects: { reputation: -5, network: -3 } },
+    ],
+    timeout: { outcome: 'By the time Sachin decides, every team is full.', lesson: 'Some doors close quietly.', effects: { sanity: -2 } },
+    minWeek: 5,
+  },
+  {
+    id: 'volunteer_trap',
+    category: 'impact',
+    codename: 'OPERATION: DIWALI DUTY',
+    location: 'HR announcement · Floor 4 pantry',
+    briefing: 'Pooja is looking for a volunteer to organise the Diwali party: venue, quiz, decorations, gift budget. Somehow, everyone has gone very quiet.',
+    dialogue: [
+      { who: 'pooja', line: 'Sachin, you’re so energetic! You’ll organise the Diwali party, na? Venue, quiz, decorations, gifts. Easy!' },
+    ],
+    prompt: 'The release is in two weeks. What does Sachin say?',
+    choices: [
+      { id: 'vt-slice', tone: 'Diplomatic', verdict: 'best', text: 'I’d love to host the quiz — that I can do well. For the rest, let’s form a small committee so it’s not on one person.', outcome: 'You host a legendary quiz, meet half the company and keep your release on track. Pooja calls it the best Diwali party in years.', lesson: 'Take the visible, bounded slice of volunteer work; share the rest. Visibility without burnout.', effects: { charisma: 4, network: 5, reputation: 3 } },
+      { id: 'vt-decline', tone: 'Assertive', verdict: 'okay', text: 'Sorry Pooja, I can’t this time — release crunch. Next year for sure.', outcome: 'Pooja understands. Someone else does it. You miss a chance to meet people, but your release ships.', lesson: 'A polite no is completely fine — just remember volunteer work can be good visibility.', effects: { network: -1 } },
+      { id: 'vt-all', tone: 'Passive', verdict: 'bad', text: 'Sure! I’ll do everything.', outcome: 'You’re buying fairy lights at 11 PM and fixing release bugs at 2 AM. The party is great; you are not.', lesson: 'Saying yes to everything feels kind — until it isn’t sustainable.', effects: { energy: -14, sanity: -8, network: 3 } },
+      { id: 'vt-flake', tone: 'Evasive', verdict: 'bad', text: 'Say yes, then quietly do nothing.', outcome: 'The party has no venue three days before Diwali. HR is furious, and everyone knows why.', lesson: 'A broken commitment costs far more than an honest no.', effects: { reputation: -10 } },
+    ],
+    timeout: { outcome: '“Great, it’s settled then!” says Pooja. Sachin is now in charge of everything.', lesson: 'Silence in a volunteer ask is a yes.', effects: { energy: -10, sanity: -6 } },
+    minWeek: 12,
+    maxWeek: 20,
+  },
+];
